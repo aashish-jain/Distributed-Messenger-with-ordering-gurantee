@@ -3,6 +3,7 @@ package edu.buffalo.cse.cse486586.groupmessenger2;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.util.Log;
 
@@ -25,6 +26,14 @@ import android.util.Log;
  *
  */
 public class GroupMessengerProvider extends ContentProvider {
+
+    //https://stackoverflow.com/questions/36652944/how-do-i-read-in-binary-data-files-in-java
+    static final String fileName = "database.db";
+    static String[] columns = {"key", "value"};
+
+    //https://developer.android.com/training/data-storage/sqlite
+    KeyValueStorageDBHelper dbHelper;
+    SQLiteDatabase dbWriter, dbReader;
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
@@ -50,14 +59,20 @@ public class GroupMessengerProvider extends ContentProvider {
          * internal storage option that we used in PA1. If you want to use that option, please
          * take a look at the code for PA1.
          */
-        Log.v("insert", values.toString());
+        //Update if column is already present
+        //https://stackoverflow.com/questions/13311727/android-sqlite-insert-or-update
+        Log.d("INSERT", values.toString());
+        long newRowId = dbWriter.insertWithOnConflict(KeyValueStorageContract.KeyValueEntry.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
         return uri;
     }
 
     @Override
     public boolean onCreate() {
         // If you need to perform any one-time initialization task, please do it here.
-        return false;
+        dbHelper = new KeyValueStorageDBHelper(getContext());
+        dbWriter = dbHelper.getWritableDatabase();
+        dbReader = dbHelper.getReadableDatabase();
+        return true;
     }
 
     @Override
@@ -80,7 +95,34 @@ public class GroupMessengerProvider extends ContentProvider {
          * recommend building a MatrixCursor described at:
          * http://developer.android.com/reference/android/database/MatrixCursor.html
          */
-        Log.v("query", selection);
-        return null;
+        Log.d("QUERYING", "key = " + selection);
+
+
+        //https://developer.android.com/training/data-storage/sqlite
+
+        // Define a projection that specifies which columns from the database
+        // you will actually use after this query.
+        projection = new String[] {
+                KeyValueStorageContract.KeyValueEntry.COLUMN_KEY,
+                KeyValueStorageContract.KeyValueEntry.COLUMN_VALUE
+        };
+
+        selectionArgs = new String[]{ selection };
+        selection = KeyValueStorageContract.KeyValueEntry.COLUMN_KEY + " = ?";
+
+        //https://developer.android.com/training/data-storage/sqlite
+        Cursor cursor = dbReader.query(
+                KeyValueStorageContract.KeyValueEntry.TABLE_NAME,   // The table to query
+                projection,             // The array of columns to return (pass null to get all)
+                selection,              // The columns for the WHERE clause
+                selectionArgs,          // The values for the WHERE clause
+                null,                   // don't group the rows
+                null,                   // don't filter by row groups
+                sortOrder               // The sort order
+        );
+
+        if(cursor.getCount() == 0)
+            Log.e("QUERY", selectionArgs[0] + " not found :-(");
+        return  cursor;
     }
 }
