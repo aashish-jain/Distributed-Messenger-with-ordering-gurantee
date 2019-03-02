@@ -2,9 +2,12 @@ package edu.buffalo.cse.cse486586.groupmessenger2;
 
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Trace;
+import android.telephony.TelephonyManager;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.Menu;
@@ -29,14 +32,30 @@ import java.net.UnknownHostException;
  */
 public class GroupMessengerActivity extends Activity {
 
-    static  TextView textView;
+    static TextView textView;
+    static final int processIdLen = 4;
+    private int getProcessId(){
+        TelephonyManager tel =
+                (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
+        String telephoneNumber = tel.getLine1Number();
+        int length = telephoneNumber.length();
+        if( length > processIdLen )
+            telephoneNumber = telephoneNumber.substring(length - processIdLen);
+        else
+            telephoneNumber = "";
+        int portNumber = Integer.parseInt(telephoneNumber);
+
+        return portNumber;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_group_messenger);
 
+
         // Starts the server task
-        new Thread(new ServerTask()).start();
+        new Thread(new ServerTask(getProcessId())).start();
 
         /*
          * TODO: Use the TextView to display your messages. Though there is no grading component
@@ -67,7 +86,7 @@ public class GroupMessengerActivity extends Activity {
                 textView = (TextView) findViewById(R.id.textView1);
                 String msg = editText.getText().toString() + "\n";
                 editText.setText(""); // This is ``one way to reset the input box.
-                Log.d("UI", "Got " + msg);
+//                Log.d("UI", "Got " + msg);
 
                 new ClientTask().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, msg);
             }
@@ -85,8 +104,14 @@ public class GroupMessengerActivity extends Activity {
     private class ServerTask implements Runnable {
         static final int SERVER_PORT = 10000;
         static final String TAG = "Server Thread";
-
+        int processId;
         int key;
+        int proposal = 1;
+
+        public ServerTask(int processId){
+            this.processId = processId;
+            Log.d(TAG, "Got processId = " + processId);
+        }
 
         //https://stackoverflow.com/questions/5853167/runnable-with-a-parameter/5853198
         private class UpdateTextView implements Runnable{
@@ -122,6 +147,7 @@ public class GroupMessengerActivity extends Activity {
             uriBuilder.scheme("content");
             Uri uri = uriBuilder.build();
 
+
             while (true)
                 try {
                     socket = serverSocket.accept();
@@ -131,22 +157,44 @@ public class GroupMessengerActivity extends Activity {
 
                     //Read from the socket
                     String message = ois.readUTF();
+                    char messageType = message.charAt(0);
+                    Log.d(TAG, "Message Type " + messageType);
+
+
+                    switch (messageType){
+                        // For ordinary messages
+                        case 'M':
+//                                    Float.parseFloat(numberAsString);
+                                    message = message.substring(1);
+                                    Log.d(TAG, "Message is " + message );
+                                    ContentValues contentValues = new ContentValues();
+                                    contentValues.put("key", new Integer(key).toString());
+                                    contentValues.put("value", message);
+                                    key++;
+
+                                    //https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
+                                    //Update the UI thread
+                                    runOnUiThread(new UpdateTextView(message));
+
+                                    getContentResolver().insert(uri, contentValues);
+                            break;
+
+                        // For responding to sequence number proposal request
+                        case 'R':
+//                                    oos.writeDouble(proposal);
+//                                    oos.flush();
+//                                    proposal++;
+                                    break;
+
+                        default:
+                                    Log.e(TAG, "Unknown message Type");
+                    }
 
                     //Acknowledgement
                     oos = new ObjectOutputStream(socket.getOutputStream());
                     oos.writeByte(255);
                     oos.flush();
 
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put("key", new Integer(key).toString());
-                    contentValues.put("value", message);
-                    key++;
-
-                    //https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
-                    //Update the UI thread
-                    runOnUiThread(new UpdateTextView(message));
-
-                    getContentResolver().insert(uri, contentValues);
 
                     oos.close();
                     ois.close();
@@ -174,14 +222,18 @@ public class GroupMessengerActivity extends Activity {
                     socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
                             remotePort);
 
+                    char messageType = 'M';
                     //https://stackoverflow.com/questions/5680259/using-sockets-to-send-and-receive-data
                     //https://stackoverflow.com/questions/49654735/send-objects-and-strings-over-socket
 
+                    //Send message
                     ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-                    oos.writeUTF(msgToSend);
+                    oos.writeUTF(messageType + msgToSend);
                     oos.flush();
+
+                    //Get ACK
                     ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-                    byte ack = ois.readByte();
+                    ois.readByte();
                     oos.close();
                     socket.close();
                 }
@@ -195,5 +247,4 @@ public class GroupMessengerActivity extends Activity {
             return null;
         }
     }
-
 }

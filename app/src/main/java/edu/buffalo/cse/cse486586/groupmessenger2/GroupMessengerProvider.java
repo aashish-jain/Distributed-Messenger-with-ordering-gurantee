@@ -61,7 +61,8 @@ public class GroupMessengerProvider extends ContentProvider {
          */
         //Update if column is already present
         //https://stackoverflow.com/questions/13311727/android-sqlite-insert-or-update
-        Log.d("INSERT", values.toString());
+
+//        Log.d("INSERT", values.toString());
         long newRowId = dbWriter.insertWithOnConflict(KeyValueStorageContract.KeyValueEntry.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
         return uri;
     }
@@ -95,7 +96,7 @@ public class GroupMessengerProvider extends ContentProvider {
          * recommend building a MatrixCursor described at:
          * http://developer.android.com/reference/android/database/MatrixCursor.html
          */
-        Log.d("QUERYING", "key = " + selection);
+//        Log.d("QUERYING", "key = " + selection);
 
 
         //https://developer.android.com/training/data-storage/sqlite
