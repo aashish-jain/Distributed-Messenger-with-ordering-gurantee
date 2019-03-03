@@ -33,19 +33,14 @@ import java.net.UnknownHostException;
 public class GroupMessengerActivity extends Activity {
 
     static TextView textView;
-    static final int processIdLen = 4;
     private int getProcessId(){
-        TelephonyManager tel =
-                (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
-        String telephoneNumber = tel.getLine1Number();
+        final int processIdLen = 4;
+        String telephoneNumber =
+                ((TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE)).getLine1Number();
         int length = telephoneNumber.length();
-        if( length > processIdLen )
-            telephoneNumber = telephoneNumber.substring(length - processIdLen);
-        else
-            telephoneNumber = "";
-        int portNumber = Integer.parseInt(telephoneNumber);
-
-        return portNumber;
+        telephoneNumber = telephoneNumber.substring(length - processIdLen);
+        int id = Integer.parseInt(telephoneNumber);
+        return id;
     }
 
     @Override
@@ -85,8 +80,7 @@ public class GroupMessengerActivity extends Activity {
                 EditText editText = (EditText) findViewById(R.id.editText1);
                 textView = (TextView) findViewById(R.id.textView1);
                 String msg = editText.getText().toString() + "\n";
-                editText.setText(""); // This is ``one way to reset the input box.
-//                Log.d("UI", "Got " + msg);
+                editText.setText("");
 
                 new ClientTask().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, msg);
             }
@@ -101,6 +95,21 @@ public class GroupMessengerActivity extends Activity {
         return true;
     }
 
+    //https://stackoverflow.com/questions/5853167/runnable-with-a-parameter/5853198
+    private static class UpdateTextView implements Runnable{
+        String message, from;
+
+        UpdateTextView(String message, String from){
+            this.message = message;
+            this.from = from;
+        }
+
+        @Override
+        public void run() {
+            textView.append(from + ":" + message);
+        }
+    }
+
     private class ServerTask implements Runnable {
         static final int SERVER_PORT = 10000;
         static final String TAG = "Server Thread";
@@ -113,19 +122,7 @@ public class GroupMessengerActivity extends Activity {
             Log.d(TAG, "Got processId = " + processId);
         }
 
-        //https://stackoverflow.com/questions/5853167/runnable-with-a-parameter/5853198
-        private class UpdateTextView implements Runnable{
-            String message;
 
-            UpdateTextView(String msg){
-                message = msg;
-            }
-
-            @Override
-            public void run() {
-                textView.append(message);
-            }
-        }
 
         public void run() {
 
@@ -150,10 +147,12 @@ public class GroupMessengerActivity extends Activity {
 
             while (true)
                 try {
+
                     socket = serverSocket.accept();
 
                     //https://stackoverflow.com/questions/11521027/whats-the-difference-between-dataoutputstream-and-objectoutputstream
                     ois = new ObjectInputStream(socket.getInputStream());
+                    oos = new ObjectOutputStream(socket.getOutputStream());
 
                     //Read from the socket
                     String message = ois.readUTF();
@@ -174,7 +173,7 @@ public class GroupMessengerActivity extends Activity {
 
                                     //https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
                                     //Update the UI thread
-                                    runOnUiThread(new UpdateTextView(message));
+                                    runOnUiThread(new UpdateTextView(message, "?"));
 
                                     getContentResolver().insert(uri, contentValues);
                             break;
@@ -191,7 +190,6 @@ public class GroupMessengerActivity extends Activity {
                     }
 
                     //Acknowledgement
-                    oos = new ObjectOutputStream(socket.getOutputStream());
                     oos.writeByte(255);
                     oos.flush();
 
@@ -206,6 +204,86 @@ public class GroupMessengerActivity extends Activity {
                     if (false)
                         break;
                 }
+        }
+    }
+
+    private class ServerResponder implements Runnable {
+        ObjectOutputStream oos;
+        ObjectInputStream ois;
+        int clientProcessId;
+
+        static final String TAG = "SERVER RESPONDER";
+
+        public  ServerResponder(Socket socket) {
+            try {
+                this.ois = new ObjectInputStream(socket.getInputStream());
+                this.oos = new ObjectOutputStream(socket.getOutputStream());
+                this.clientProcessId = ois.readInt();
+            } catch (IOException e) {
+                Log.d(TAG, "Unable to connect");
+                e.printStackTrace();
+            }
+        }
+        @Override
+        public void run() {
+
+            //fix this ???
+            int key = 0;
+
+            Uri.Builder uriBuilder = new Uri.Builder();
+            uriBuilder.authority("edu.buffalo.cse.cse486586.groupmessenger2.provider");
+            uriBuilder.scheme("content");
+            Uri uri = uriBuilder.build();
+
+            //Read from the socket
+            String message = null;
+            try {
+                message = ois.readUTF();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            char messageType = message.charAt(0);
+            Log.d(TAG, "Message Type " + messageType);
+
+
+            switch (messageType){
+                // For ordinary messages
+                case 'M':
+//                                    Float.parseFloat(numberAsString);
+                    message = message.substring(1);
+                    Log.d(TAG, "Message is " + message );
+                    ContentValues contentValues = new ContentValues();
+                    contentValues.put("key", new Integer(key).toString());
+                    contentValues.put("value", message);
+                    key++;
+
+                    //https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
+                    //Update the UI thread
+                    runOnUiThread(new UpdateTextView(message, "?"));
+
+                    getContentResolver().insert(uri, contentValues);
+                    break;
+
+                // For responding to sequence number proposal request
+                case 'R':
+//                                    oos.writeDouble(proposal);
+//                                    oos.flush();
+//                                    proposal++;
+                    break;
+
+                default:
+                    Log.e(TAG, "Unknown message Type");
+            }
+
+            //Acknowledgement
+            try {
+                oos.writeByte(255);
+                oos.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
         }
     }
 
