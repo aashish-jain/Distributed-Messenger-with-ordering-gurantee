@@ -76,11 +76,11 @@ class KeyValueStorageDBHelper extends SQLiteOpenHelper {
 
 public class GroupMessengerProvider extends ContentProvider {
 
-    //https://stackoverflow.com/questions/36652944/how-do-i-read-in-binary-data-files-in-java
+    /* https://stackoverflow.com/questions/36652944/how-do-i-read-in-binary-data-files-in-java */
     static final String fileName = "database.db";
     static String[] columns = {"key", "value"};
 
-    //https://developer.android.com/training/data-storage/sqlite
+    /* https://developer.android.com/training/data-storage/sqlite */
     KeyValueStorageDBHelper dbHelper;
     SQLiteDatabase dbWriter, dbReader;
 
@@ -108,11 +108,11 @@ public class GroupMessengerProvider extends ContentProvider {
          * internal storage option that we used in PA1. If you want to use that option, please
          * take a look at the code for PA1.
          */
-        //Update if column is already present
-        //https://stackoverflow.com/questions/13311727/android-sqlite-insert-or-update
+        /* Update if column is already present */
+        /* https://stackoverflow.com/questions/13311727/android-sqlite-insert-or-update */
 
 //        Log.d("INSERT", values.toString());
-        long newRowId = dbWriter.insertWithOnConflict(KeyValueStorageContract.KeyValueEntry.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+        dbWriter.insertWithOnConflict(KeyValueStorageContract.KeyValueEntry.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
         return uri;
     }
 
@@ -148,10 +148,11 @@ public class GroupMessengerProvider extends ContentProvider {
 //        Log.d("QUERYING", "key = " + selection);
 
 
-        //https://developer.android.com/training/data-storage/sqlite
+        /* https://developer.android.com/training/data-storage/sqlite */
 
-        // Define a projection that specifies which columns from the database
-        // you will actually use after this query.
+        /* Define a projection that specifies which columns from the database
+         * you will actually use after this query.
+         */
         projection = new String[] {
                 KeyValueStorageContract.KeyValueEntry.COLUMN_KEY,
                 KeyValueStorageContract.KeyValueEntry.COLUMN_VALUE
@@ -160,19 +161,20 @@ public class GroupMessengerProvider extends ContentProvider {
         selectionArgs = new String[]{ selection };
         selection = KeyValueStorageContract.KeyValueEntry.COLUMN_KEY + " = ?";
 
-        //https://developer.android.com/training/data-storage/sqlite
+        /* https://developer.android.com/training/data-storage/sqlite */
         Cursor cursor = dbReader.query(
                 KeyValueStorageContract.KeyValueEntry.TABLE_NAME,   // The table to query
                 projection,             // The array of columns to return (pass null to get all)
                 selection,              // The columns for the WHERE clause
                 selectionArgs,          // The values for the WHERE clause
-                null,                   // don't group the rows
-                null,                   // don't filter by row groups
+                null,           // don't group the rows
+                null,            // don't filter by row groups
                 sortOrder               // The sort order
         );
 
         if(cursor.getCount() == 0)
             Log.e("QUERY", selectionArgs[0] + " not found :-(");
+
         return  cursor;
     }
 }

@@ -4,9 +4,7 @@ import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Trace;
 import android.telephony.TelephonyManager;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -33,12 +31,17 @@ import java.net.UnknownHostException;
 public class GroupMessengerActivity extends Activity {
 
     static TextView textView;
+    static EditText editText;
+    static int selfProcessId, messageId=0;
+    static int[] remoteProcessIds = new int[]{11108, 11112, 11116, 11120, 11124};
+    static Uri uri;
+
     private int getProcessId(){
-        final int processIdLen = 4;
+        final int selfProcessIdLen = 4;
         String telephoneNumber =
                 ((TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE)).getLine1Number();
         int length = telephoneNumber.length();
-        telephoneNumber = telephoneNumber.substring(length - processIdLen);
+        telephoneNumber = telephoneNumber.substring(length - selfProcessIdLen);
         int id = Integer.parseInt(telephoneNumber);
         return id;
     }
@@ -48,44 +51,52 @@ public class GroupMessengerActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_group_messenger);
 
+        /* Get the process ID using telephone number*/
+        selfProcessId = getProcessId();
 
-        // Starts the server task
-        new Thread(new ServerTask(getProcessId())).start();
+        /* Uri for the content provider */
+        Uri.Builder uriBuilder = new Uri.Builder();
+        uriBuilder.authority("edu.buffalo.cse.cse486586.groupmessenger2.provider");
+        uriBuilder.scheme("content");
+        uri = uriBuilder.build();
 
-        /*
-         * TODO: Use the TextView to display your messages. Though there is no grading component
-         * on how you display the messages, if you implement it, it'll make your debugging easier.
-         */
+        /* Starts the Server Interactor Spawner */
+        new ServerThreadSpawner(selfProcessId).start();
+
+        /* Process Id generator */
+        messageId = selfProcessId;
+
+        /* Get the textView and the editText of the activity */
         textView = (TextView) findViewById(R.id.textView1);
         textView.setMovementMethod(new ScrollingMovementMethod());
-        
+        editText = (EditText) findViewById(R.id.editText1);
+        textView = (TextView) findViewById(R.id.textView1);
+
         /*
          * Registers OnPTestClickListener for "button1" in the layout, which is the "PTest" button.
          * OnPTestClickListener demonstrates how to access a ContentProvider.
          */
         findViewById(R.id.button1).setOnClickListener(
                 new OnPTestClickListener(textView, getContentResolver()));
-        
-        /*
-         * TODO: You need to register and implement an OnClickListener for the "Send" button.
-         * In your implementation you need to get the message from the input box (EditText)
-         * and send it to other AVDs.
-         */
-        final Button button = (Button) findViewById(R.id.button4);
 
-        //https://developer.android.com/reference/android/widget/Button
+        /* https://developer.android.com/reference/android/widget/Button */
+        Button button = (Button) findViewById(R.id.button4);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                EditText editText = (EditText) findViewById(R.id.editText1);
-                textView = (TextView) findViewById(R.id.textView1);
-                String msg = editText.getText().toString() + "\n";
+                String message = editText.getText().toString() + "\n";
                 editText.setText("");
 
-                new ClientTask().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, msg);
+                /* Spawn new thread to connect to every peer */
+                for(int remoteProcessId: remoteProcessIds)
+                    new ClientThread(selfProcessId, remoteProcessId, message, messageId).start();
+
+                /* Update the message id here as it is threadsafe.
+                * Last 4 digits are process id and message/1000 is the message number
+                * */
+                messageId+=1000;
             }
         });
-
     }
 
     @Override
@@ -96,37 +107,35 @@ public class GroupMessengerActivity extends Activity {
     }
 
     //https://stackoverflow.com/questions/5853167/runnable-with-a-parameter/5853198
-    private static class UpdateTextView implements Runnable{
-        String message, from;
+    private class UpdateTextView implements Runnable{
+        String message;
+        int from;
 
-        UpdateTextView(String message, String from){
+        UpdateTextView(String message, int from){
             this.message = message;
             this.from = from;
         }
 
         @Override
         public void run() {
-            textView.append(from + ":" + message);
+            textView.append(from + " : " + message);
         }
     }
 
-    private class ServerTask implements Runnable {
+    //https://stackoverflow.com/questions/10131377/socket-programming-multiple-client-to-one-server
+    private class ServerThreadSpawner extends Thread {
         static final int SERVER_PORT = 10000;
-        static final String TAG = "Server Thread";
-        int processId;
-        int key;
-        int proposal = 1;
+        static final String TAG = "SERVER_TASK";
+        int selfProcessId;
 
-        public ServerTask(int processId){
-            this.processId = processId;
-            Log.d(TAG, "Got processId = " + processId);
+
+        public ServerThreadSpawner(int selfProcessId){
+            this.selfProcessId = selfProcessId;
+            Log.d(TAG, "Got selfProcessId = " + selfProcessId);
         }
 
-
-
         public void run() {
-
-            //Open a socket
+            /* Open a socket at SERVER_PORT */
             ServerSocket serverSocket = null;
             try {
                 serverSocket = new ServerSocket(SERVER_PORT);
@@ -134,149 +143,62 @@ public class GroupMessengerActivity extends Activity {
                 e.printStackTrace();
             }
 
-            //read from socket to ObjectInputStream object
-            Socket socket = null;
-            ObjectOutputStream oos = null;
-            ObjectInputStream ois = null;
-
-            Uri.Builder uriBuilder = new Uri.Builder();
-            uriBuilder.authority("edu.buffalo.cse.cse486586.groupmessenger2.provider");
-            uriBuilder.scheme("content");
-            Uri uri = uriBuilder.build();
-
-
+            /* Accept a client connection and spawn a thread to respond */
             while (true)
                 try {
-
-                    socket = serverSocket.accept();
-
-                    //https://stackoverflow.com/questions/11521027/whats-the-difference-between-dataoutputstream-and-objectoutputstream
-                    ois = new ObjectInputStream(socket.getInputStream());
-                    oos = new ObjectOutputStream(socket.getOutputStream());
-
-                    //Read from the socket
-                    String message = ois.readUTF();
-                    char messageType = message.charAt(0);
-                    Log.d(TAG, "Message Type " + messageType);
-
-
-                    switch (messageType){
-                        // For ordinary messages
-                        case 'M':
-//                                    Float.parseFloat(numberAsString);
-                                    message = message.substring(1);
-                                    Log.d(TAG, "Message is " + message );
-                                    ContentValues contentValues = new ContentValues();
-                                    contentValues.put("key", new Integer(key).toString());
-                                    contentValues.put("value", message);
-                                    key++;
-
-                                    //https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
-                                    //Update the UI thread
-                                    runOnUiThread(new UpdateTextView(message, "?"));
-
-                                    getContentResolver().insert(uri, contentValues);
-                            break;
-
-                        // For responding to sequence number proposal request
-                        case 'R':
-//                                    oos.writeDouble(proposal);
-//                                    oos.flush();
-//                                    proposal++;
-                                    break;
-
-                        default:
-                                    Log.e(TAG, "Unknown message Type");
-                    }
-
-                    //Acknowledgement
-                    oos.writeByte(255);
-                    oos.flush();
-
-
-                    oos.close();
-                    ois.close();
-
+                    Socket socket = serverSocket.accept();
+                    new ServerThread(socket, this.selfProcessId).start();
                 } catch (IOException e) {
                     e.printStackTrace();
-                    Log.e(TAG, "ServerTask socket IOException");
-                    //Workaround for unable to close
-                    if (false)
-                        break;
+                    Log.e(TAG, "ServerThreadSpawner socket IOException");
                 }
         }
     }
 
-    private class ServerResponder implements Runnable {
+
+    /* https://stackoverflow.com/questions/10131377/socket-programming-multiple-client-to-one-server*/
+    private class ServerThread extends Thread {
         ObjectOutputStream oos;
         ObjectInputStream ois;
-        int clientProcessId;
+        int selfId, clientProcessId;
 
-        static final String TAG = "SERVER RESPONDER";
+        static final String TAG = "SERVER_THREAD";
 
-        public  ServerResponder(Socket socket) {
+
+        public  ServerThread(Socket socket, int selfId) {
             try {
                 this.ois = new ObjectInputStream(socket.getInputStream());
                 this.oos = new ObjectOutputStream(socket.getOutputStream());
                 this.clientProcessId = ois.readInt();
+                this.selfId = selfId;
             } catch (IOException e) {
-                Log.d(TAG, "Unable to connect");
+                Log.e(TAG, "Unable to connect");
                 e.printStackTrace();
             }
         }
+
+        private void writeToContentProvider(int key, String message){
+            ContentValues contentValues = new ContentValues();
+            contentValues.put("key", new Integer(key).toString());
+            contentValues.put("value", message);
+            key++;
+            getContentResolver().insert(uri, contentValues);
+
+        }
+
         @Override
         public void run() {
-
-            //fix this ???
-            int key = 0;
-
-            Uri.Builder uriBuilder = new Uri.Builder();
-            uriBuilder.authority("edu.buffalo.cse.cse486586.groupmessenger2.provider");
-            uriBuilder.scheme("content");
-            Uri uri = uriBuilder.build();
-
             //Read from the socket
-            String message = null;
             try {
-                message = ois.readUTF();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            char messageType = message.charAt(0);
-            Log.d(TAG, "Message Type " + messageType);
+                String message = ois.readUTF();
+
+                /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
+                 * Update the UI thread */
+                runOnUiThread(new UpdateTextView(message, clientProcessId));
+//                writeToContentProvider(key, message);
 
 
-            switch (messageType){
-                // For ordinary messages
-                case 'M':
-//                                    Float.parseFloat(numberAsString);
-                    message = message.substring(1);
-                    Log.d(TAG, "Message is " + message );
-                    ContentValues contentValues = new ContentValues();
-                    contentValues.put("key", new Integer(key).toString());
-                    contentValues.put("value", message);
-                    key++;
-
-                    //https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
-                    //Update the UI thread
-                    runOnUiThread(new UpdateTextView(message, "?"));
-
-                    getContentResolver().insert(uri, contentValues);
-                    break;
-
-                // For responding to sequence number proposal request
-                case 'R':
-//                                    oos.writeDouble(proposal);
-//                                    oos.flush();
-//                                    proposal++;
-                    break;
-
-                default:
-                    Log.e(TAG, "Unknown message Type");
-            }
-
-            //Acknowledgement
-            try {
+                //Acknowledgement
                 oos.writeByte(255);
                 oos.flush();
             } catch (IOException e) {
@@ -287,42 +209,46 @@ public class GroupMessengerActivity extends Activity {
         }
     }
 
-    private class ClientTask extends AsyncTask<String, Void, Void> {
-        final int[] REMOTE_PORTS = new int[]{11108, 11112, 11116, 11120, 11124};
-        final String TAG = "Client Task";
+    private class ClientThread extends Thread {
+        final String TAG = "CLIENT_THREAD";
+        int remoteProcessId, selfProcessId;
+        String message;
+        int uid;
+
+        public ClientThread(int selfProcessId, int remoteProcessId, String message, int uid){
+            this.remoteProcessId = remoteProcessId;
+            this.message = message;
+            this.uid = uid;
+            this.selfProcessId = selfProcessId;
+        }
 
         @Override
-        protected Void doInBackground(String... msgs) {
-            Socket socket = null;
-            String msgToSend = msgs[0];
+        public void run() {
             try {
-                for (int remotePort : REMOTE_PORTS) {
-                    socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
-                            remotePort);
+                    Socket socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
+                            remoteProcessId);
 
-                    char messageType = 'M';
                     //https://stackoverflow.com/questions/5680259/using-sockets-to-send-and-receive-data
                     //https://stackoverflow.com/questions/49654735/send-objects-and-strings-over-socket
 
-                    //Send message
+                    /* Streams */
                     ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-                    oos.writeUTF(messageType + msgToSend);
+                    ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+                    oos.writeInt(this.selfProcessId);
+
+                    oos.writeUTF(message);
                     oos.flush();
 
-                    //Get ACK
-                    ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+                    /* Get ACK */
                     ois.readByte();
                     oos.close();
                     socket.close();
-                }
             } catch (UnknownHostException e) {
-                Log.e(TAG, "ClientTask UnknownHostException");
+                Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
             } catch (IOException e) {
                 e.printStackTrace();
-                Log.e(TAG, "ClientTask socket IOException");
+                Log.e(TAG, "ClientThread socket IOException");
             }
-            Log.d("Client", "Sent message " + msgToSend);
-            return null;
         }
     }
 }
