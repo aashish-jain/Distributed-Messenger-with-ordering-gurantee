@@ -4,15 +4,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-class Message{
-    int uid;
-    String message;
 
-    Message(int uid, String message){
-        this.uid = uid;
-        this.message = message;
-    }
-}
+
 public class SharedQueue {
     Lock lock;
     int sharedWith;
@@ -26,6 +19,7 @@ public class SharedQueue {
     public SharedQueue(int sharedWith){
         this.lock = new ReentrantLock();
         this.sharedWith = sharedWith;
+        this.linkedBlockingQueue = new LinkedBlockingQueue<Message>();
     }
 
     /* Adds the message to the end of the list */
@@ -56,7 +50,7 @@ public class SharedQueue {
         } finally {
             lock.unlock();
         }
-        return null;
+        return topMessage;
     }
 
     /* If any peer is down call this function to update the sharedWith variable*/

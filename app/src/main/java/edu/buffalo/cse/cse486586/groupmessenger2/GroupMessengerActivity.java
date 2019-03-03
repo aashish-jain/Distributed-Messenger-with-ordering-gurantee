@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.text.method.ScrollingMovementMethod;
@@ -35,6 +36,8 @@ public class GroupMessengerActivity extends Activity {
     static int selfProcessId, messageId=0;
     static int[] remoteProcessIds = new int[]{11108, 11112, 11116, 11120, 11124};
     static Uri uri;
+    static boolean spawnedClients = false;
+    static SharedQueue sharedQueue;
 
     private int getProcessId(){
         final int selfProcessIdLen = 4;
@@ -46,10 +49,20 @@ public class GroupMessengerActivity extends Activity {
         return id;
     }
 
+    private void spawnClientThreads(){
+        /* Spawn new thread to connect to every peer */
+        for(int remoteProcessId: remoteProcessIds)
+            AsyncTask.execute(new ClientThread(selfProcessId, remoteProcessId));
+        spawnedClients = true;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_group_messenger);
+
+        /* Initialize the shared queue*/
+        sharedQueue = new SharedQueue(remoteProcessIds.length);
 
         /* Get the process ID using telephone number*/
         selfProcessId = getProcessId();
@@ -62,6 +75,7 @@ public class GroupMessengerActivity extends Activity {
 
         /* Starts the Server Interactor Spawner */
         new ServerThreadSpawner(selfProcessId).start();
+
 
         /* Process Id generator */
         messageId = selfProcessId;
@@ -87,14 +101,14 @@ public class GroupMessengerActivity extends Activity {
                 String message = editText.getText().toString() + "\n";
                 editText.setText("");
 
-                /* Spawn new thread to connect to every peer */
-                for(int remoteProcessId: remoteProcessIds)
-                    new ClientThread(selfProcessId, remoteProcessId, message, messageId).start();
-
+                //, message, messageId
                 /* Update the message id here as it is threadsafe.
                 * Last 4 digits are process id and message/1000 is the message number
                 * */
-                messageId+=1000;
+                if(!spawnedClients)
+                    spawnClientThreads();
+                sharedQueue.addToQueue(new Message(messageId, message));
+                messageId+=10000;
             }
         });
     }
@@ -209,45 +223,44 @@ public class GroupMessengerActivity extends Activity {
         }
     }
 
-    private class ClientThread extends Thread {
+    private class ClientThread implements Runnable {
         final String TAG = "CLIENT_THREAD";
         int remoteProcessId, selfProcessId;
-        String message;
-        int uid;
+        ObjectOutputStream oos;
+        ObjectInputStream ois;
 
-        public ClientThread(int selfProcessId, int remoteProcessId, String message, int uid){
+        public ClientThread(int selfProcessId, int remoteProcessId){
             this.remoteProcessId = remoteProcessId;
-            this.message = message;
-            this.uid = uid;
             this.selfProcessId = selfProcessId;
         }
 
         @Override
         public void run() {
+            Message message;
             try {
                     Socket socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
                             remoteProcessId);
 
                     //https://stackoverflow.com/questions/5680259/using-sockets-to-send-and-receive-data
                     //https://stackoverflow.com/questions/49654735/send-objects-and-strings-over-socket
-
                     /* Streams */
-                    ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-                    ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+                    this.oos = new ObjectOutputStream(socket.getOutputStream());
+                    this.ois = new ObjectInputStream(socket.getInputStream());
+                    /* Retrieve the message from blocking queue */
+                    message = sharedQueue.popFront();
                     oos.writeInt(this.selfProcessId);
-
-                    oos.writeUTF(message);
+                    oos.writeUTF(message.toString());
                     oos.flush();
 
                     /* Get ACK */
                     ois.readByte();
                     oos.close();
-                    socket.close();
             } catch (UnknownHostException e) {
                 Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
             } catch (IOException e) {
                 e.printStackTrace();
                 Log.e(TAG, "ClientThread socket IOException");
+            } finally {
             }
         }
     }
