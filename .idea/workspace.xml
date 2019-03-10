@@ -34,9 +34,9 @@
           <entry key="project.closed" value="4" />
           <entry key="project.open.time.4" value="1" />
           <entry key="project.open.time.6" value="3" />
-          <entry key="project.open.time.7" value="1" />
+          <entry key="project.open.time.7" value="2" />
           <entry key="project.open.time.8" value="1" />
-          <entry key="project.opened" value="6" />
+          <entry key="project.opened" value="7" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
@@ -53,13 +53,13 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="java" value="10321" />
+          <entry key="java" value="11490" />
           <entry key="xml" value="5" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="JAVA" value="10321" />
+          <entry key="JAVA" value="11490" />
           <entry key="XML" value="5" />
         </counts>
       </usages-collector>
@@ -70,12 +70,10 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="289">
-              <caret line="320" column="17" lean-forward="true" selection-start-line="320" selection-start-column="17" selection-end-line="320" selection-end-column="17" />
+            <state relative-caret-position="589">
+              <caret line="297" selection-start-line="297" selection-end-line="297" />
               <folding>
-                <element signature="e#1179#1202#0" expanded="true" />
-                <element signature="e#3179#3917#0" expanded="true" />
-                <element signature="e#3916#3917#0" expanded="true" />
+                <element signature="e#1228#1251#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -84,8 +82,18 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/Message.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="425">
-              <caret line="25" selection-start-line="25" selection-end-line="25" />
+            <state relative-caret-position="170">
+              <caret line="28" column="63" selection-start-line="28" selection-start-column="63" selection-end-line="28" selection-end-column="63" />
+              <folding>
+                <element signature="e#1117#1118#0" expanded="true" />
+                <element signature="e#1147#1148#0" expanded="true" />
+                <element signature="e#1394#1395#0" expanded="true" />
+                <element signature="e#1426#1427#0" expanded="true" />
+                <element signature="e#1460#1461#0" expanded="true" />
+                <element signature="e#1490#1491#0" expanded="true" />
+                <element signature="e#1751#1752#0" expanded="true" />
+                <element signature="e#1785#1786#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -101,9 +109,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>UI</find>
-      <find>stat</find>
-      <find>msgId</find>
       <find>ServerTask</find>
       <find>ClientTask</find>
       <find>ServerResponder</find>
@@ -128,6 +133,12 @@
       <find>ClientInteractor</find>
       <find>client</find>
       <find>Connected</find>
+      <find>ESTABL</find>
+      <find>Establ</find>
+      <find>//</find>
+      <find>synch</find>
+      <find>synchr</find>
+      <find>key</find>
     </findStrings>
     <replaceStrings>
       <replace>ServerInteractorSpawner</replace>
@@ -295,7 +306,7 @@
       <window_info id="Image Layers" order="5" />
       <window_info id="Designer" order="6" />
       <window_info id="Favorites" order="7" side_tool="true" />
-      <window_info active="true" anchor="bottom" id="Logcat" order="0" visible="true" weight="0.325054" />
+      <window_info active="true" anchor="bottom" id="Logcat" order="0" visible="true" weight="0.32397407" />
       <window_info anchor="bottom" id="TODO" order="1" />
       <window_info anchor="bottom" id="Android Profiler" order="2" weight="0.32937366" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.32937366" />
@@ -375,19 +386,27 @@
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/SharedQueue.java" />
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/Message.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="425">
-          <caret line="25" selection-start-line="25" selection-end-line="25" />
+        <state relative-caret-position="170">
+          <caret line="28" column="63" selection-start-line="28" selection-start-column="63" selection-end-line="28" selection-end-column="63" />
+          <folding>
+            <element signature="e#1117#1118#0" expanded="true" />
+            <element signature="e#1147#1148#0" expanded="true" />
+            <element signature="e#1394#1395#0" expanded="true" />
+            <element signature="e#1426#1427#0" expanded="true" />
+            <element signature="e#1460#1461#0" expanded="true" />
+            <element signature="e#1490#1491#0" expanded="true" />
+            <element signature="e#1751#1752#0" expanded="true" />
+            <element signature="e#1785#1786#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="289">
-          <caret line="320" column="17" lean-forward="true" selection-start-line="320" selection-start-column="17" selection-end-line="320" selection-end-column="17" />
+        <state relative-caret-position="589">
+          <caret line="297" selection-start-line="297" selection-end-line="297" />
           <folding>
-            <element signature="e#1179#1202#0" expanded="true" />
-            <element signature="e#3179#3917#0" expanded="true" />
-            <element signature="e#3916#3917#0" expanded="true" />
+            <element signature="e#1228#1251#0" expanded="true" />
           </folding>
         </state>
       </provider>

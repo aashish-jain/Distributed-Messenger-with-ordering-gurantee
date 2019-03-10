@@ -41,11 +41,13 @@ public class GroupMessengerActivity extends Activity {
     EditText editText;
     int selfProcessId, messageId=0;
     Uri uri;
+    int ContentProviderkey = 0;
+
+    final int selfProcessIdLen = 4;
 
     Map<Integer, ClientThread> socketMap = new HashMap<Integer, ClientThread>();
 
     private int getProcessId(){
-        final int selfProcessIdLen = 4;
         String telephoneNumber =
                 ((TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE)).getLine1Number();
         int length = telephoneNumber.length();
@@ -54,6 +56,14 @@ public class GroupMessengerActivity extends Activity {
         return id;
     }
 
+    private synchronized void writeToContentProvider(int key, String message){
+        ContentValues contentValues = new ContentValues();
+        contentValues.put("key", new Integer(key).toString());
+        contentValues.put("value", message);
+        key++;
+        getContentResolver().insert(uri, contentValues);
+
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,7 +118,8 @@ public class GroupMessengerActivity extends Activity {
                 * */
 
                 new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, new Message(messageId, message));
-                messageId+=10000;
+                //Update the Id
+                messageId+= Math.pow(10, selfProcessIdLen);
             }
         });
     }
@@ -206,20 +217,10 @@ public class GroupMessengerActivity extends Activity {
                 this.oos = new ObjectOutputStream(socket.getOutputStream());
                 this.clientProcessId = ois.readInt();
                 this.selfId = selfId;
-//                runOnUiThread(new UpdateTextView("Connected to" + this.clientProcessId +"\n" , 0));
             } catch (IOException e) {
                 Log.e(TAG, "Unable to connect");
                 e.printStackTrace();
             }
-        }
-
-        private void writeToContentProvider(int key, String message){
-            ContentValues contentValues = new ContentValues();
-            contentValues.put("key", new Integer(key).toString());
-            contentValues.put("value", message);
-            key++;
-            getContentResolver().insert(uri, contentValues);
-
         }
 
         @Override
@@ -227,11 +228,11 @@ public class GroupMessengerActivity extends Activity {
             //Read from the socket
             try {
                 while (true) {
-                    String message = ois.readUTF();
-                    Log.d(TAG, message);
+                    Message message = new Message(ois.readUTF());
+                    Log.d(TAG, "Recieved " + message.toString());
                     /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
                      * Update the UI thread */
-                    runOnUiThread(new UpdateTextView(message, clientProcessId));
+                    runOnUiThread(new UpdateTextView(message.toString(), clientProcessId));
                     //                writeToContentProvider(key, message);
                 }
             } catch (IOException e) {
@@ -262,7 +263,6 @@ public class GroupMessengerActivity extends Activity {
                 this.ois = new ObjectInputStream(socket.getInputStream());
                 /* One-time operation. Send server the client's process id*/
                 this.oos.writeInt(selfProcessId);
-                Log.d(TAG, "Established connection with process " + remoteProcessId);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -276,9 +276,9 @@ public class GroupMessengerActivity extends Activity {
             }
         }
 
-        void unicastToRemote(String message){
+        private void unicastToRemote(Message message){
             try {
-                oos.writeUTF(message);
+                oos.writeUTF(message.encodeMessage());
                 oos.flush();
             } catch (UnknownHostException e) {
                 Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
@@ -292,7 +292,9 @@ public class GroupMessengerActivity extends Activity {
         public void run(){
             while (true){
                 try {
-                    unicastToRemote(messageQueue.take().toString());
+                    Message message = messageQueue.take();
+                    Log.d(TAG, message.getMessageId() + ':' + message.getMessage());
+                    unicastToRemote(message);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -329,8 +331,9 @@ public class GroupMessengerActivity extends Activity {
                 if(socketMap.size() == 0)
                     establishConnection();
 
+                Log.d(TAG, message.toString());
                 for(int remoteProcessId : socketMap.keySet())
-                    socketMap.get(remoteProcessId).unicastToRemote(message.toString());
+                    socketMap.get(remoteProcessId).addToQueue(message);
 
                 return null;
         }
