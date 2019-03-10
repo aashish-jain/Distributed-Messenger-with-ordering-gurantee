@@ -3,11 +3,14 @@ package edu.buffalo.cse.cse486586.groupmessenger2;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
+import android.text.Spannable;
 import android.text.method.ScrollingMovementMethod;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -146,14 +149,35 @@ public class GroupMessengerActivity extends Activity {
         String message;
         int from;
 
+
         UpdateTextView(String message, int from){
             this.message = message;
             this.from = from;
         }
 
+        /* https://stackoverflow.com/questions/8105545/can-i-select-a-color-for-each-text-line-i-append-to-a-textview*/
+        public void appendColoredText(TextView tv, String text, int color) {
+            int start = tv.getText().length();
+            tv.append(text);
+            int end = tv.getText().length();
+
+            Spannable spannableText = (Spannable) tv.getText();
+            spannableText.setSpan(new ForegroundColorSpan(color), start, end, 0);
+        }
+
         @Override
-        public void run() {
-            textView.append(from + " : " + message);
+        public synchronized void run() {
+            int color = 0;
+            switch (from){
+                case 5554:  color = Color.MAGENTA;  break;
+                case 5556:  color = Color.BLACK;    break;
+                case 5558:  color = Color.GREEN;    break;
+                case 5560:  color = Color.BLUE;     break;
+                case 5562:  color = Color.RED;      break;
+                default:    color = Color.DKGRAY;   break;
+            }
+            String line = "("+from + ") : " + message;
+            appendColoredText(textView, line, color);
         }
     }
 
@@ -242,6 +266,7 @@ public class GroupMessengerActivity extends Activity {
 
         }
     }
+
 
     private class ClientThread extends Thread {
         final String TAG = "CLIENT_THREAD";
