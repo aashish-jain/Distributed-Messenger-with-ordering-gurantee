@@ -70,7 +70,6 @@ public class GroupMessengerActivity extends Activity {
                 e.printStackTrace();
             }
         }
-
     }
 
     @Override
