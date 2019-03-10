@@ -36,12 +36,13 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class GroupMessengerActivity extends Activity {
 
-    static TextView textView;
-    static EditText editText;
-    static int selfProcessId, messageId=0;
-    static int[] remoteProcessIds = new int[]{11108, 11112, 11116, 11120, 11124};
-    static Uri uri;
-    static boolean spawnedClients = false;
+    TextView textView;
+    EditText editText;
+    int selfProcessId, messageId=0;
+    int[] remoteProcessIds = new int[]{11108, 11112, 11116, 11120, 11124};
+    Uri uri;
+    boolean spawnedClients = false;
+
     ArrayList<LinkedBlockingQueue<Message>> blockingQueueList;
 
     private int getProcessId(){
