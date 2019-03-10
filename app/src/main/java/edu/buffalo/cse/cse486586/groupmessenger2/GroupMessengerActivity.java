@@ -27,6 +27,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * GroupMessengerActivity is the main Activity for the assignment.
@@ -41,7 +42,7 @@ public class GroupMessengerActivity extends Activity {
     int selfProcessId, messageId=0;
     Uri uri;
 
-    Map<Integer, ClientHelper> socketMap = new HashMap<Integer, ClientHelper>();
+    Map<Integer, ClientThread> socketMap = new HashMap<Integer, ClientThread>();
 
     private int getProcessId(){
         final int selfProcessIdLen = 4;
@@ -106,7 +107,7 @@ public class GroupMessengerActivity extends Activity {
                 * Last 4 digits are process id and message/1000 is the message number
                 * */
 
-                new ClientThread().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, new Message(messageId, message));
+                new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, new Message(messageId, message));
                 messageId+=10000;
             }
         });
@@ -181,7 +182,6 @@ public class GroupMessengerActivity extends Activity {
             while (true)
                 try {
                     Socket socket = serverSocket.accept();
-                    Log.d(TAG, "Connection ?");
                     new ServerThread(socket, this.selfProcessId).start();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -206,7 +206,7 @@ public class GroupMessengerActivity extends Activity {
                 this.oos = new ObjectOutputStream(socket.getOutputStream());
                 this.clientProcessId = ois.readInt();
                 this.selfId = selfId;
-                Log.d(TAG, "Incoming");
+//                runOnUiThread(new UpdateTextView("Connected to" + this.clientProcessId +"\n" , 0));
             } catch (IOException e) {
                 Log.e(TAG, "Unable to connect");
                 e.printStackTrace();
@@ -240,14 +240,16 @@ public class GroupMessengerActivity extends Activity {
         }
     }
 
-    private class ClientHelper{
+    private class ClientThread extends Thread{
         Socket socket;
         int remoteProcessId;
         ObjectOutputStream oos;
         ObjectInputStream ois;
-        final String TAG = "CLIENT_HELPER";
+        LinkedBlockingQueue<Message> messageQueue;
+        final String TAG = "CLIENT_THREAD";
 
-        ClientHelper(int remoteProcessId, Socket socket){
+        ClientThread(int remoteProcessId, Socket socket){
+            this.messageQueue = new LinkedBlockingQueue<Message>();
             this.socket = socket;
             this.remoteProcessId = remoteProcessId;
             try {
@@ -260,15 +262,23 @@ public class GroupMessengerActivity extends Activity {
                 this.ois = new ObjectInputStream(socket.getInputStream());
                 /* One-time operation. Send server the client's process id*/
                 this.oos.writeInt(selfProcessId);
-                Log.d(TAG, "to id " + remoteProcessId);
+                Log.d(TAG, "Established connection with process " + remoteProcessId);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        void unicastToRemote(Message message){
+        void addToQueue(Message message){
             try {
-                oos.writeUTF(message.toString());
+                messageQueue.put(message);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        void unicastToRemote(String message){
+            try {
+                oos.writeUTF(message);
                 oos.flush();
             } catch (UnknownHostException e) {
                 Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
@@ -277,9 +287,20 @@ public class GroupMessengerActivity extends Activity {
                 Log.e(TAG, "ClientThread socket IOException");
             }
         }
+
+        @Override
+        public void run(){
+            while (true){
+                try {
+                    unicastToRemote(messageQueue.take().toString());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
-    private class ClientThread extends AsyncTask<Message, Void, Void> {
+    private class ClientThreadSpawner extends AsyncTask<Message, Void, Void> {
         final String TAG = "CLIENT_THREAD";
         final int[] remoteProcessIds = new int[]{11108, 11112, 11116, 11120, 11124};
 
@@ -294,7 +315,9 @@ public class GroupMessengerActivity extends Activity {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    socketMap.put(remoteProcessId, new ClientHelper(remoteProcessId, socket));
+                    ClientThread clientThread = new ClientThread(remoteProcessId, socket);
+                    socketMap.put(remoteProcessId, clientThread);
+                    clientThread.start();
                 }
             }
 
@@ -307,7 +330,8 @@ public class GroupMessengerActivity extends Activity {
                     establishConnection();
 
                 for(int remoteProcessId : socketMap.keySet())
-                    socketMap.get(remoteProcessId).unicastToRemote(message);
+                    socketMap.get(remoteProcessId).unicastToRemote(message.toString());
+
                 return null;
         }
     }
