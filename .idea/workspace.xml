@@ -57,13 +57,13 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="java" value="7689" />
+          <entry key="java" value="8095" />
           <entry key="xml" value="5" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="JAVA" value="7689" />
+          <entry key="JAVA" value="8095" />
           <entry key="XML" value="5" />
         </counts>
       </usages-collector>
@@ -74,11 +74,13 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="17">
-              <caret line="246" column="43" lean-forward="true" selection-start-line="246" selection-start-column="43" selection-end-line="246" selection-end-column="43" />
+            <state relative-caret-position="399">
+              <caret line="293" column="67" selection-start-line="293" selection-start-column="67" selection-end-line="293" selection-end-column="67" />
               <folding>
                 <element signature="e#5353#5354#0" expanded="true" />
                 <element signature="e#5419#5420#0" expanded="true" />
+                <element signature="class#ServerThread#0;class#GroupMessengerActivity#0" />
+                <element signature="class#ClientInteractor#0;class#ClientThread#0;class#GroupMessengerActivity#0" />
               </folding>
             </state>
           </provider>
@@ -130,6 +132,8 @@
       <find>semaphore</find>
       <find>shared que</find>
       <find>Color</find>
+      <find>blockingQueueList</find>
+      <find>spawnedClients</find>
     </findStrings>
     <replaceStrings>
       <replace>ServerInteractorSpawner</replace>
@@ -142,6 +146,7 @@
       <replace>selfProcessId</replace>
       <replace>remoteProcessIds</replace>
       <replace>listSemaphore</replace>
+      <replace>spawnedClient</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -314,8 +319,8 @@
       <window_info anchor="bottom" id="Run" order="4" weight="0.32937366" />
       <window_info anchor="bottom" id="Event Log" order="5" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="6" weight="0.32937366" />
-      <window_info anchor="bottom" id="Build" order="7" weight="0.32937366" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="8" visible="true" weight="0.32937366" />
+      <window_info active="true" anchor="bottom" id="Build" order="7" visible="true" weight="0.32937366" />
+      <window_info anchor="bottom" id="Terminal" order="8" weight="0.32937366" />
       <window_info anchor="bottom" id="Find" order="9" weight="0.32937366" />
       <window_info anchor="right" id="Device File Explorer" order="0" side_tool="true" />
       <window_info anchor="right" id="Capture Analysis" order="1" />
@@ -412,11 +417,13 @@
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/SharedQueue.java" />
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="17">
-          <caret line="246" column="43" lean-forward="true" selection-start-line="246" selection-start-column="43" selection-end-line="246" selection-end-column="43" />
+        <state relative-caret-position="399">
+          <caret line="293" column="67" selection-start-line="293" selection-start-column="67" selection-end-line="293" selection-end-column="67" />
           <folding>
             <element signature="e#5353#5354#0" expanded="true" />
             <element signature="e#5419#5420#0" expanded="true" />
+            <element signature="class#ServerThread#0;class#GroupMessengerActivity#0" />
+            <element signature="class#ClientInteractor#0;class#ClientThread#0;class#GroupMessengerActivity#0" />
           </folding>
         </state>
       </provider>

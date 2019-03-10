@@ -23,6 +23,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -36,10 +37,9 @@ public class GroupMessengerActivity extends Activity {
     TextView textView;
     EditText editText;
     int selfProcessId, messageId=0;
-    int[] remoteProcessIds = new int[]{11108, 11112, 11116, 11120, 11124};
     Uri uri;
-    boolean spawnedClients = false;
-    ArrayList<LinkedBlockingQueue<Message>> blockingQueueList;
+    boolean spawnedClient = false;
+    LinkedBlockingQueue<Message> blockingQueue;
 
     private int getProcessId(){
         final int selfProcessIdLen = 4;
@@ -51,27 +51,13 @@ public class GroupMessengerActivity extends Activity {
         return id;
     }
 
-    private void spawnClientThreads(){
+    private void spawnClientThread(){
         /* Spawn new thread to connect to every peer */
-        int i = 0;
-        for(int remoteProcessId: remoteProcessIds) {
-            Thread t = new ClientThread(selfProcessId, remoteProcessId, blockingQueueList.get(i));
-            t.start();
-            i++;
-        }
-        spawnedClients = true;
+        Thread t = new ClientThread(selfProcessId, blockingQueue);
+        t.start();
+        spawnedClient = true;
     }
 
-    private void updateBlockingList(Message message){
-        for(LinkedBlockingQueue linkedBlockingQueue: blockingQueueList ) {
-            try {
-                linkedBlockingQueue.put(message);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,9 +65,7 @@ public class GroupMessengerActivity extends Activity {
         setContentView(R.layout.activity_group_messenger);
 
         /* Initialize the shared queue*/
-        blockingQueueList = new ArrayList<LinkedBlockingQueue<Message>>(remoteProcessIds.length);
-        for(int i=0; i<remoteProcessIds.length; i++)
-            blockingQueueList.add(new LinkedBlockingQueue<Message>());
+        blockingQueue = new LinkedBlockingQueue<Message>();
 
         /* Get the process ID using telephone number*/
         selfProcessId = getProcessId();
@@ -125,10 +109,10 @@ public class GroupMessengerActivity extends Activity {
                 /* Update the message id here as it is threadsafe.
                 * Last 4 digits are process id and message/1000 is the message number
                 * */
-                if(!spawnedClients)
-                    spawnClientThreads();
+                if(!spawnedClient)
+                    spawnClientThread();
 
-                updateBlockingList(new Message(messageId, message));
+                blockingQueue.add(new Message(messageId, message));
                 messageId+=10000;
             }
         });
@@ -245,25 +229,21 @@ public class GroupMessengerActivity extends Activity {
 
     private class ClientThread extends Thread {
         final String TAG = "CLIENT_THREAD";
-        int remoteProcessId, selfProcessId;
-        ObjectOutputStream oos;
-        ObjectInputStream ois;
+        int selfProcessId;
         LinkedBlockingQueue<Message> queue;
+        int[] remoteProcessIds = new int[]{11108, 11112, 11116, 11120, 11124};
+        LinkedList<ClientInteractor> clientInteractors;
 
-        public ClientThread(int selfProcessId, int remoteProcessId, LinkedBlockingQueue<Message> queue){
-            this.remoteProcessId = remoteProcessId;
-            this.selfProcessId = selfProcessId;
-            this.queue = queue;
-        }
+        private class ClientInteractor{
+            int remoteProcessId;
+            ObjectOutputStream oos;
+            ObjectInputStream ois;
 
-        @Override
-        public void run() {
-            Message message;
-
-            try {
+            ClientInteractor(int remoteProcessId){
+                this.remoteProcessId = remoteProcessId;
+                try {
                     Socket socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
                             remoteProcessId);
-
                     /*
                      * https://stackoverflow.com/questions/5680259/using-sockets-to-send-and-receive-data
                      * https://stackoverflow.com/questions/49654735/send-objects-and-strings-over-socket
@@ -273,22 +253,48 @@ public class GroupMessengerActivity extends Activity {
                     this.ois = new ObjectInputStream(socket.getInputStream());
 
                     /* One-time operation. Send server the client's process id*/
-                    oos.writeInt(this.selfProcessId);
+                    oos.writeInt(selfProcessId);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
 
-                    while(true){
-                        /* Retrieve the message from blocking queue */
-                        Log.d(TAG, "to id " + remoteProcessId);
-                        message = queue.take();
-                        oos.writeUTF(message.toString());
-                        oos.flush();
-                    }
-            } catch (UnknownHostException e) {
-                Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.e(TAG, "ClientThread socket IOException");
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            }
+
+            void requestProposals(Message message){
+
+                try {
+                    Log.d(TAG, "to id " + remoteProcessId);
+                    oos.writeUTF(message.toString());
+                    oos.flush();
+                } catch (UnknownHostException e) {
+                    Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.e(TAG, "ClientThread socket IOException");
+                }
+            }
+        }
+
+        public ClientThread(int selfProcessId, LinkedBlockingQueue<Message> queue){
+            this.selfProcessId = selfProcessId;
+            this.queue = queue;
+
+            for(int remoteProcessId : remoteProcessIds)
+                clientInteractors.add(new ClientInteractor(remoteProcessId));
+        }
+
+        @Override
+        public void run() {
+            Message message;
+            while (true){
+                /* Retrieve the message from blocking queue */
+                try {
+                    message = queue.take();
+                    for(ClientInteractor clientInteractor : clientInteractors)
+                        clientInteractor.requestProposals(message);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
