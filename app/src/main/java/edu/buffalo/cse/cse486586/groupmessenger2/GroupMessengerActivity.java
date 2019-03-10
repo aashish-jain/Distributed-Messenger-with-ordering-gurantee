@@ -46,6 +46,7 @@ public class GroupMessengerActivity extends Activity {
         String telephoneNumber =
                 ((TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE)).getLine1Number();
         int length = telephoneNumber.length();
+        Log.i("GOT NUMBER", telephoneNumber);
         telephoneNumber = telephoneNumber.substring(length - selfProcessIdLen);
         int id = Integer.parseInt(telephoneNumber);
         return id;
