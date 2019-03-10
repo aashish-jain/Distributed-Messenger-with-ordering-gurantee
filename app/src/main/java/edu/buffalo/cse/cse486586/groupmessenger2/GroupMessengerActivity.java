@@ -146,10 +146,10 @@ public class GroupMessengerActivity extends Activity {
             switch (from){
                 case 5554:  color = Color.MAGENTA;  break;
                 case 5556:  color = Color.BLACK;    break;
-                case 5558:  color = Color.GREEN;    break;
+                case 5558:  color = Color.DKGRAY;    break;
                 case 5560:  color = Color.BLUE;     break;
                 case 5562:  color = Color.RED;      break;
-                default:    color = Color.DKGRAY;   break;
+                default:    color = Color.BLACK;   break;
             }
             String line = "("+from + ") : " + message;
             appendColoredText(textView, line, color);
@@ -237,11 +237,8 @@ public class GroupMessengerActivity extends Activity {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-
         }
     }
-
 
     private class ClientHelper{
         Socket socket;
@@ -288,25 +285,27 @@ public class GroupMessengerActivity extends Activity {
 
 
         protected void establishConnection(){
-                if(socketMap.size() == 0){
-                    /* Establish the connection to server and store it in a Hashmap*/
-                    for (int remoteProcessId : remoteProcessIds) {
-                        Socket socket = null;
-                        try {
-                            socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
-                                    remoteProcessId);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        socketMap.put(remoteProcessId, new ClientHelper(remoteProcessId, socket));
+                /* Establish the connection to server and store it in a Hashmap*/
+                for (int remoteProcessId : remoteProcessIds) {
+                    Socket socket = null;
+                    try {
+                        socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
+                                remoteProcessId);
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
+                    socketMap.put(remoteProcessId, new ClientHelper(remoteProcessId, socket));
                 }
             }
 
             @Override
             protected Void doInBackground(Message... msgs) {
-                establishConnection();
                 Message message = msgs[0];
+
+                //For the first time attempt to establish connection
+                if(socketMap.size() == 0)
+                    establishConnection();
+
                 for(int remoteProcessId : socketMap.keySet())
                     socketMap.get(remoteProcessId).unicastToRemote(message);
                 return null;
