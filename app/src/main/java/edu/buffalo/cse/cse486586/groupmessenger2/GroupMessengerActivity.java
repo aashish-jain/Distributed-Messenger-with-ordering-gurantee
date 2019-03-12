@@ -119,8 +119,11 @@ public class GroupMessengerActivity extends Activity {
         uri = uriBuilder.build();
 
         /* Starts the Server Interactor Spawner */
-        Log.d("UI", "Server Started");
+        Log.d("START", "Server Started");
         new ServerThreadSpawner(selfProcessId).start();
+
+        Log.d("START", "Proposal HAndler Started");
+        new Thread(new ProposalHandler()).start();
 
 
         /* Process Id generator */
@@ -418,6 +421,7 @@ public class GroupMessengerActivity extends Activity {
                             if(proposalNumber < proposal)
                                 proposalNumber = proposal;
                         }
+                        proposalQueue.put(message);
                         */
 
                     } catch (UnknownHostException e) {
