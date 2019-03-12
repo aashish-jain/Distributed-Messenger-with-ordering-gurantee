@@ -14,7 +14,7 @@ public class Message{
     private int id;
     private String message;
     private type type;
-    private float priority ;
+    private long priority ;
     private boolean deliverable;
 
     public boolean isDeliverable() {
@@ -28,7 +28,7 @@ public class Message{
     Message(int id, String message){
         this.id = id;
         this.message = message;
-        this.priority = -1.0F;
+        this.priority = -1;
         /* When a message is first created, it needs to request proposals*/
         this.type = type.PROPOSAL_REQUEST;
     }
@@ -39,7 +39,7 @@ public class Message{
             this.type = type.valueOf(strings[0]);
             this.id = Integer.parseInt(strings[1]);
             this.message = strings[2];
-            this.priority = Float.parseFloat(strings[3]);
+            this.priority = Long.parseLong(strings[3]);
         }
         else {
             throw new IOException("unable to parse the String");

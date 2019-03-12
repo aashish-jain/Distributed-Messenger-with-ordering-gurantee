@@ -27,6 +27,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,8 +44,10 @@ public class GroupMessengerActivity extends Activity {
     int selfProcessId, messageId=0;
     Uri uri;
     AtomicInteger contentProviderKey;
-    HashedPriorityQueue<Integer, Message> deliveryQueue;
+    Long proposalNumber;
+    PriorityQueue<Message> deliveryQueue;
     LinkedBlockingQueue<Message> proposalQueue;
+    int idIncrementValue = 0;
 
     final int selfProcessIdLen = 4, initCapacity = 100;
 
@@ -64,7 +67,26 @@ public class GroupMessengerActivity extends Activity {
         contentValues.put("key", new Integer(key).toString());
         contentValues.put("value", message);
         getContentResolver().insert(uri, contentValues);
+    }
 
+    public String printPriorityQueue(PriorityQueue<Message> priorityQueue) {
+        StringBuilder stringBuilder = new StringBuilder();
+        PriorityQueue<Message> pq = new PriorityQueue<Message>(priorityQueue);
+        int i = pq.size();
+        for (; i!=0; i--){
+            stringBuilder.append( pq.poll().toString() + "\n" );
+        }
+        return stringBuilder.toString();
+    }
+
+    public Message findInPriorityQueue(PriorityQueue<Message> priorityQueue, Message message) {
+        Message toReturn = null;
+        for (Message priorityQueueIterator : priorityQueue)
+            if (priorityQueueIterator.getId() == message.getId()) {
+                toReturn = message;
+                break;
+            }
+        return toReturn;
     }
 
     @Override
@@ -76,10 +98,16 @@ public class GroupMessengerActivity extends Activity {
         selfProcessId = getProcessId();
 
         /* Content Provider Key*/
-        contentProviderKey = new AtomicInteger();
+        contentProviderKey = new AtomicInteger(0);
 
-        /* HashedPriorityQueue For Waiting Queue */
-        deliveryQueue = new HashedPriorityQueue<Integer, Message>(initCapacity, new MessageComparator());
+        /* Proposal Number*/
+        proposalNumber = new Long(selfProcessId);
+
+        /* Id increment value*/
+        idIncrementValue = (int) Math.pow(10, selfProcessIdLen);
+
+        /* delivery Queue */
+        deliveryQueue = new PriorityQueue<Message>(initCapacity, new MessageComparator());
 
         /* Proposal Queue */
         proposalQueue = new LinkedBlockingQueue<Message>(initCapacity);
@@ -130,7 +158,7 @@ public class GroupMessengerActivity extends Activity {
 
                 new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, new Message(messageId, message));
                 //Update the Id
-                messageId+= Math.pow(10, selfProcessIdLen);
+                messageId+= idIncrementValue;
             }
         });
     }
@@ -244,71 +272,18 @@ public class GroupMessengerActivity extends Activity {
                     /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
                      * Update the UI thread */
                     runOnUiThread(new UpdateTextView(message.getMessage(), clientProcessId));
-//                    writeToContentProvider(contentProviderKey.getAndIncrement(), message.getMessage());
+
+                    /*
+                    long proposal = 0;
+                    synchronized (proposalNumber){
+                        proposal = proposalNumber;
+                        proposalNumber+=1;
+                    }
+                    oos.writeLong(proposal);
+                    */
                 }
             } catch (IOException e) {
                 e.printStackTrace();
-            }
-        }
-    }
-
-    private class ClientThread extends Thread{
-        Socket socket;
-        int remoteProcessId;
-        ObjectOutputStream oos;
-        ObjectInputStream ois;
-        LinkedBlockingQueue<Message> messageQueue;
-        final String TAG = "CLIENT_THREAD";
-
-        ClientThread(int remoteProcessId, Socket socket){
-            this.messageQueue = new LinkedBlockingQueue<Message>();
-            this.socket = socket;
-            this.remoteProcessId = remoteProcessId;
-            try {
-                /*
-                 * https://stackoverflow.com/questions/5680259/using-sockets-to-send-and-receive-data
-                 * https://stackoverflow.com/questions/49654735/send-objects-and-strings-over-socket
-                 */
-                /* Streams */
-                this.oos = new ObjectOutputStream(socket.getOutputStream());
-                this.ois = new ObjectInputStream(socket.getInputStream());
-                /* One-time operation. Send server the client's process id*/
-                this.oos.writeInt(selfProcessId);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        void addToQueue(Message message){
-            try {
-                messageQueue.put(message);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        private void unicastToRemote(Message message){
-            try {
-                oos.writeUTF(message.encodeMessage());
-                oos.flush();
-            } catch (UnknownHostException e) {
-                Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.e(TAG, "ClientThread socket IOException");
-            }
-        }
-
-        @Override
-        public void run(){
-            while (true){
-                try {
-                    Message message = messageQueue.take();
-                    Log.d(TAG, message.getId() + ':' + message.getMessage());
-                    unicastToRemote(message);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
             }
         }
     }
@@ -345,7 +320,6 @@ public class GroupMessengerActivity extends Activity {
                 Log.d(TAG, message.toString());
                 for(int remoteProcessId : socketMap.keySet())
                     socketMap.get(remoteProcessId).addToQueue(message);
-
                 return null;
         }
     }
@@ -360,23 +334,24 @@ public class GroupMessengerActivity extends Activity {
         @Override
         public void run(){
             try {
+                /* Take the message from the proposal queue */
                 Message message = proposalQueue.take();
-                Message queueMessage = deliveryQueue.find(message.getId());
+
+                /* Find the message with given Id, update it and re-insert to the queue*/
+                Message queueMessage = findInPriorityQueue(deliveryQueue, message);
+                deliveryQueue.remove(queueMessage);
                 queueMessage.setPriority(message.getPriority());
+                deliveryQueue.offer(queueMessage);
 
-                deliveryQueue.update(queueMessage.getId(), queueMessage);
-                /** If the hashmap already has the key, i.e. not the first proposal
-                 * Use the hashmap to retrieve the message object, remove it from the priority queue
-                 * Update the priority and then re-insert the value to the queue if second proposal
-                 */
-
-
-
+                /* Get the first message from the delivery queue and check if it is deliverable
+                * Then deliver all the deliverable messages at the beginning of the queue
+                */
                 message = deliveryQueue.peek();
                 while (message.isDeliverable()){
                     /** TODO: Deliver the message */
                     Log.d(TAG, "Delivered "+ message.toString());
                     deliveryQueue.poll();
+                    writeToContentProvider(contentProviderKey.getAndIncrement(), message.getMessage());
                     message = deliveryQueue.peek();
                 }
 
@@ -387,7 +362,75 @@ public class GroupMessengerActivity extends Activity {
         }
     }
 
+    private class ClientThread extends Thread{
+        Socket socket;
+        int remoteProcessId;
+        ObjectOutputStream oos;
+        ObjectInputStream ois;
+        LinkedBlockingQueue<Message> messageQueue;
+        final String TAG = "CLIENT_THREAD";
+
+        ClientThread(int remoteProcessId, Socket socket){
+            this.messageQueue = new LinkedBlockingQueue<Message>();
+            this.socket = socket;
+            this.remoteProcessId = remoteProcessId;
+            try {
+                /*
+                 * https://stackoverflow.com/questions/5680259/using-sockets-to-send-and-receive-data
+                 * https://stackoverflow.com/questions/49654735/send-objects-and-strings-over-socket
+                 */
+                /* Streams */
+                this.oos = new ObjectOutputStream(socket.getOutputStream());
+                this.ois = new ObjectInputStream(socket.getInputStream());
+                /* One-time operation. Send server the client's process id*/
+                this.oos.writeInt(selfProcessId);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        void addToQueue(Message message){
+            try {
+                messageQueue.put(message);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
 
+        @Override
+        public void run(){
+            while (true){
+                try {
+                    Message message = messageQueue.take();
+                    Log.d(TAG, message.getId() + ':' + message.getMessage());
+                    try {
+                        oos.writeUTF(message.encodeMessage());
+                        oos.flush();
+                        /*
+                        long proposal = this.ois.readLong();
+                        */
+
+                        /* Update the global proposal number */
+                        /*
+                        synchronized(proposalNumber){
+                            if(proposalNumber < proposal)
+                                proposalNumber = proposal;
+                        }
+                        */
+
+                    } catch (UnknownHostException e) {
+                        Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        Log.e(TAG, "ClientThread socket IOException");
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
 }
