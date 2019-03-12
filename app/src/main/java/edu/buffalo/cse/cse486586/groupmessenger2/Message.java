@@ -1,12 +1,13 @@
 package edu.buffalo.cse.cse486586.groupmessenger2;
 
 import java.io.IOException;
+import java.util.Comparator;
 
 enum MessageType{
     PROPOSAL_REQUEST, ORDERED_MESSAGE;
 }
 
-public class Message{
+public class Message implements Comparator<Message> {
     static final int messageIdLen=4;
     String seperator = "<sep>";
 
@@ -63,6 +64,11 @@ public class Message{
 
     public MessageType getMessageType() {
         return messageType;
+    }
+
+    @Override
+    public int compare(Message lhs, Message rhs) {
+        return 0;
     }
 }
 
