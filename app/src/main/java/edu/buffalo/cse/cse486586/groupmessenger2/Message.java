@@ -15,6 +15,15 @@ public class Message{
     private String message;
     private type type;
     private float priority ;
+    private boolean deliverable;
+
+    public boolean isDeliverable() {
+        return deliverable;
+    }
+
+    public void setDeliverable(boolean deliverable) {
+        this.deliverable = deliverable;
+    }
 
     Message(int id, String message){
         this.id = id;

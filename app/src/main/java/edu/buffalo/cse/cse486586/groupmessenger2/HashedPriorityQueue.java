@@ -53,6 +53,14 @@ public class HashedPriorityQueue<K,V> {
         return success;
     }
 
+    public V peek(){
+        return this.priorityQueue.peek();
+    }
+
+    public V poll(){
+        return this.priorityQueue.poll();
+    }
+
     @Override
     public String toString() {
         StringBuilder stringBuilder = new StringBuilder();

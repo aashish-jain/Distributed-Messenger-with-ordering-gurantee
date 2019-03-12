@@ -28,6 +28,7 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * GroupMessengerActivity is the main Activity for the assignment.
@@ -41,9 +42,11 @@ public class GroupMessengerActivity extends Activity {
     EditText editText;
     int selfProcessId, messageId=0;
     Uri uri;
-    int ContentProviderkey = 0;
+    AtomicInteger contentProviderKey;
+    HashedPriorityQueue<Integer, Message> deliveryQueue;
+    LinkedBlockingQueue<Message> proposalQueue;
 
-    final int selfProcessIdLen = 4;
+    final int selfProcessIdLen = 4, initCapacity = 100;
 
     Map<Integer, ClientThread> socketMap = new HashMap<Integer, ClientThread>();
 
@@ -56,11 +59,10 @@ public class GroupMessengerActivity extends Activity {
         return id;
     }
 
-    private synchronized void writeToContentProvider(int key, String message){
+    private void writeToContentProvider(int key, String message){
         ContentValues contentValues = new ContentValues();
         contentValues.put("key", new Integer(key).toString());
         contentValues.put("value", message);
-        key++;
         getContentResolver().insert(uri, contentValues);
 
     }
@@ -72,6 +74,15 @@ public class GroupMessengerActivity extends Activity {
 
         /* Get the process ID using telephone number*/
         selfProcessId = getProcessId();
+
+        /* Content Provider Key*/
+        contentProviderKey = new AtomicInteger();
+
+        /* HashedPriorityQueue For Waiting Queue */
+        deliveryQueue = new HashedPriorityQueue<Integer, Message>(initCapacity, new MessageComparator());
+
+        /* Proposal Queue */
+        proposalQueue = new LinkedBlockingQueue<Message>(initCapacity);
 
         /* Uri for the content provider */
         Uri.Builder uriBuilder = new Uri.Builder();
@@ -233,7 +244,7 @@ public class GroupMessengerActivity extends Activity {
                     /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
                      * Update the UI thread */
                     runOnUiThread(new UpdateTextView(message.getMessage(), clientProcessId));
-                    //                writeToContentProvider(key, message);
+//                    writeToContentProvider(contentProviderKey.getAndIncrement(), message.getMessage());
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -338,4 +349,45 @@ public class GroupMessengerActivity extends Activity {
                 return null;
         }
     }
+
+    private class ProposalHandler extends Thread{
+        final String TAG = "PROPOSAL_HANDLER";
+
+        ProposalHandler(){
+            this.start();
+        }
+
+        @Override
+        public void run(){
+            try {
+                Message message = proposalQueue.take();
+                Message queueMessage = deliveryQueue.find(message.getId());
+                queueMessage.setPriority(message.getPriority());
+
+                deliveryQueue.update(queueMessage.getId(), queueMessage);
+                /** If the hashmap already has the key, i.e. not the first proposal
+                 * Use the hashmap to retrieve the message object, remove it from the priority queue
+                 * Update the priority and then re-insert the value to the queue if second proposal
+                 */
+
+
+
+                message = deliveryQueue.peek();
+                while (message.isDeliverable()){
+                    /** TODO: Deliver the message */
+                    Log.d(TAG, "Delivered "+ message.toString());
+                    deliveryQueue.poll();
+                    message = deliveryQueue.peek();
+                }
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+
+
+
+
 }
