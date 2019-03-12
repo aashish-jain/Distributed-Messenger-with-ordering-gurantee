@@ -232,7 +232,7 @@ public class GroupMessengerActivity extends Activity {
                     Log.d(TAG, "Recieved " + message.toString());
                     /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
                      * Update the UI thread */
-                    runOnUiThread(new UpdateTextView(message.toString(), clientProcessId));
+                    runOnUiThread(new UpdateTextView(message.getMessage(), clientProcessId));
                     //                writeToContentProvider(key, message);
                 }
             } catch (IOException e) {
@@ -293,7 +293,7 @@ public class GroupMessengerActivity extends Activity {
             while (true){
                 try {
                     Message message = messageQueue.take();
-                    Log.d(TAG, message.getMessageId() + ':' + message.getMessage());
+                    Log.d(TAG, message.getId() + ':' + message.getMessage());
                     unicastToRemote(message);
                 } catch (InterruptedException e) {
                     e.printStackTrace();

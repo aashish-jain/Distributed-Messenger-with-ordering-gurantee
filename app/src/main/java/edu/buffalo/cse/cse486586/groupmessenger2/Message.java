@@ -3,34 +3,34 @@ package edu.buffalo.cse.cse486586.groupmessenger2;
 import java.io.IOException;
 import java.util.Comparator;
 
-enum MessageType{
+enum type{
     PROPOSAL_REQUEST, ORDERED_MESSAGE;
 }
 
-public class Message implements Comparator<Message> {
-    static final int messageIdLen=4;
+public class Message{
+    static final int idLem=4;
     String seperator = "<sep>";
 
-    private int messageId;
+    private int id;
     private String message;
-    private MessageType messageType;
-    private float messagePriority ;
+    private type type;
+    private float priority ;
 
-    Message(int messageId, String message){
-        this.messageId = messageId;
+    Message(int id, String message){
+        this.id = id;
         this.message = message;
-        this.messagePriority = -1.0F;
+        this.priority = -1.0F;
         /* When a message is first created, it needs to request proposals*/
-        this.messageType = MessageType.PROPOSAL_REQUEST;
+        this.type = type.PROPOSAL_REQUEST;
     }
 
     Message(String string) throws IOException {
         String[] strings = string.split(seperator);
         if(strings.length == 4) {
-            this.messageType = messageType.valueOf(strings[0]);
-            this.messageId = Integer.parseInt(strings[1]);
+            this.type = type.valueOf(strings[0]);
+            this.id = Integer.parseInt(strings[1]);
             this.message = strings[2];
-            this.messagePriority = Float.parseFloat(strings[3]);
+            this.priority = Float.parseFloat(strings[3]);
         }
         else {
             throw new IOException("unable to parse the String");
@@ -39,36 +39,46 @@ public class Message implements Comparator<Message> {
 
     @Override
     public String toString() {
-        return message;
+        return id+message;
     }
 
     public String encodeMessage(){
-            return messageType + seperator + messageId
-                    +seperator + message + seperator + messagePriority;
+        return type + seperator + id
+                +seperator + message + seperator + priority;
     }
 
-    public int getMessageId() {
-        return messageId;
+    public int getId() {
+        return id;
     }
 
     public String getMessage() {
         return message;
     }
 
-    public synchronized void setMessagePriority(float priority){
-        if(messagePriority > priority) {
-            messagePriority = priority;
-            messageType = messageType.ORDERED_MESSAGE;
+    public void setPriority(float priority){
+        if(priority > priority) {
+            priority = priority;
+            type = type.ORDERED_MESSAGE;
         }
     }
 
-    public MessageType getMessageType() {
-        return messageType;
+    public float getPriority(){
+        return priority;
     }
 
-    @Override
-    public int compare(Message lhs, Message rhs) {
-        return 0;
+    public type getType() {
+        return type;
     }
 }
 
+class MessageComparator implements Comparator<Message>{
+
+    @Override
+    public int compare(Message m1, Message m2) {
+//        if(m1.getPriority() > m2.getPriority())
+        if(m1.getId() > m2.getId())
+            return 1;
+        else
+            return -1;
+    }
+}

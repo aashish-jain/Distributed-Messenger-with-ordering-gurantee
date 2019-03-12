@@ -4,9 +4,15 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.PriorityQueue;
 
+/**
+ * Hybrid of a HashMap and Priority Queue
+ * @param Key  : <K>
+ * @param Value : <V>
+ */
+
 public class HashedPriorityQueue<K,V> {
-    HashMap<K,V> hashMap;
-    PriorityQueue<V> priorityQueue;
+    private HashMap<K,V> hashMap;
+    private PriorityQueue<V> priorityQueue;
 
     HashedPriorityQueue(int initialCapacity, Comparator<V> comparator){
         hashMap = new HashMap<K, V>();
@@ -40,11 +46,22 @@ public class HashedPriorityQueue<K,V> {
 
     public boolean update(K key, V value){
         boolean success = false;
-        if(this.containsKey(key)){
-            this.remove(key);
-            this.add(key, value);
-            success = true;
+        if(hashMap.containsKey(key)){
+            System.out.println("Contains");
+            success = this.remove(key) && this.add(key, value);
         }
         return success;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder stringBuilder = new StringBuilder();
+        PriorityQueue<V> pq = new PriorityQueue<V>(this.priorityQueue);
+        int i = pq.size();
+        for (; i!=0; i--){
+            stringBuilder.append( pq.poll().toString() + "\n" );
+        }
+        return stringBuilder.toString();
+    }
 }
+
