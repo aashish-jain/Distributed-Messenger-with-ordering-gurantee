@@ -75,7 +75,7 @@ public class Message{
     public void setPriority(float priority){
         proposalCount += 1;
         if(priority > priority) {
-            priority = priority;
+            this.priority = priority;
             type = type.ORDERED_MESSAGE;
         }
     }

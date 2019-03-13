@@ -43,25 +43,25 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
         <counts>
-          <entry key="java" value="17" />
+          <entry key="java" value="18" />
           <entry key="xml" value="2" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.open">
         <counts>
-          <entry key="JAVA" value="17" />
+          <entry key="JAVA" value="18" />
           <entry key="XML" value="2" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="java" value="15239" />
+          <entry key="java" value="15244" />
           <entry key="xml" value="5" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="JAVA" value="15239" />
+          <entry key="JAVA" value="15244" />
           <entry key="XML" value="5" />
         </counts>
       </usages-collector>
@@ -72,11 +72,10 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-6">
-              <caret line="262" column="34" selection-start-line="262" selection-start-column="34" selection-end-line="262" selection-end-column="34" />
+            <state relative-caret-position="762">
+              <caret line="387" column="25" lean-forward="true" selection-start-line="387" selection-start-column="25" selection-end-line="387" selection-end-column="25" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="method#getProcessId#0;class#GroupMessengerActivity#0" />
                 <element signature="method#writeToContentProvider#0;class#GroupMessengerActivity#0" />
                 <element signature="method#printPriorityQueue#0;class#GroupMessengerActivity#0" />
                 <element signature="method#findInPriorityQueue#0;class#GroupMessengerActivity#0" />
@@ -92,11 +91,20 @@
           </provider>
         </entry>
       </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerProvider.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="189">
+              <caret line="136" selection-start-line="136" selection-end-line="136" />
+            </state>
+          </provider>
+        </entry>
+      </file>
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/Message.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="443">
-              <caret line="106" selection-start-line="106" selection-end-line="106" />
+            <state relative-caret-position="306">
+              <caret line="80" column="1" selection-start-line="80" selection-start-column="1" selection-end-line="80" selection-end-column="1" />
               <folding>
                 <element signature="imports" expanded="true" />
                 <element signature="e#1529#1530#0" expanded="true" />
@@ -117,7 +125,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>establishConnection</find>
       <find>ClientThread</find>
       <find>ClientThreadSpawner</find>
       <find>ClientHelper</find>
@@ -146,6 +153,7 @@
       <find>prio</find>
       <find>priority</find>
       <find>proposal</find>
+      <find>toStr</find>
       <find>Reciv</find>
     </findStrings>
     <replaceStrings>
@@ -173,11 +181,11 @@
         <option value="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" />
         <option value="$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/KeyValueStorageContract.java" />
         <option value="$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/KeyValueStorageDBHelper.java" />
-        <option value="$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerProvider.java" />
         <option value="$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/SharedQueue.java" />
         <option value="$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/HashedPrioityQueue.java" />
         <option value="$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/HashedPriorityQueue.java" />
         <option value="$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/ModifiedPriorityQueue.java" />
+        <option value="$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerProvider.java" />
         <option value="$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java" />
         <option value="$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/Message.java" />
       </list>
@@ -308,6 +316,15 @@
     </task>
     <servers />
   </component>
+  <component name="TodoView">
+    <todo-panel id="selected-file">
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+    <todo-panel id="all">
+      <are-packages-shown value="true" />
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+  </component>
   <component name="ToolWindowManager">
     <frame x="0" y="28" width="1920" height="1052" extended-state="6" />
     <editor active="true" />
@@ -320,15 +337,15 @@
       <window_info id="Image Layers" order="5" />
       <window_info id="Designer" order="6" />
       <window_info id="Favorites" order="7" side_tool="true" />
-      <window_info active="true" anchor="bottom" id="Logcat" order="0" visible="true" weight="0.32289416" />
-      <window_info anchor="bottom" id="TODO" order="1" />
+      <window_info anchor="bottom" id="Logcat" order="0" weight="0.32289416" />
+      <window_info anchor="bottom" id="TODO" order="1" weight="0.32937366" />
       <window_info anchor="bottom" id="Android Profiler" order="2" weight="0.32937366" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.32937366" />
       <window_info anchor="bottom" id="Run" order="4" weight="0.32937366" />
       <window_info anchor="bottom" id="Event Log" order="5" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="6" />
       <window_info anchor="bottom" id="Build" order="7" weight="0.32937366" />
-      <window_info anchor="bottom" id="Terminal" order="8" weight="0.3265086" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="8" visible="true" weight="0.3261339" />
       <window_info anchor="bottom" id="Find" order="9" weight="0.32937366" />
       <window_info anchor="right" id="Device File Explorer" order="0" side_tool="true" />
       <window_info anchor="right" id="Capture Analysis" order="1" />
@@ -376,13 +393,6 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/KeyValueStorageContract.java" />
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/KeyValueStorageDBHelper.java" />
-    <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerProvider.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-289">
-          <caret line="51" lean-forward="true" selection-start-line="51" selection-end-line="51" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$USER_HOME$/Android/Sdk/sources/android-19/android/os/AsyncTask.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="4023">
@@ -400,13 +410,19 @@
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/SharedQueue.java" />
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/ModifiedPriorityQueue.java" />
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/HashedPriorityQueue.java" />
+    <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerProvider.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="189">
+          <caret line="136" selection-start-line="136" selection-end-line="136" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-6">
-          <caret line="262" column="34" selection-start-line="262" selection-start-column="34" selection-end-line="262" selection-end-column="34" />
+        <state relative-caret-position="762">
+          <caret line="387" column="25" lean-forward="true" selection-start-line="387" selection-start-column="25" selection-end-line="387" selection-end-column="25" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="method#getProcessId#0;class#GroupMessengerActivity#0" />
             <element signature="method#writeToContentProvider#0;class#GroupMessengerActivity#0" />
             <element signature="method#printPriorityQueue#0;class#GroupMessengerActivity#0" />
             <element signature="method#findInPriorityQueue#0;class#GroupMessengerActivity#0" />
@@ -423,8 +439,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/Message.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="443">
-          <caret line="106" selection-start-line="106" selection-end-line="106" />
+        <state relative-caret-position="306">
+          <caret line="80" column="1" selection-start-line="80" selection-start-column="1" selection-end-line="80" selection-end-column="1" />
           <folding>
             <element signature="imports" expanded="true" />
             <element signature="e#1529#1530#0" expanded="true" />

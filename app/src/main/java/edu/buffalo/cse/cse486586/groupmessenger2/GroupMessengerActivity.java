@@ -282,16 +282,16 @@ public class GroupMessengerActivity extends Activity {
                         proposal = proposalNumber;
                         proposalNumber += 1;
                     }
-//                    oos.writeFloat(proposal);
-//                    message.setPriority(proposal);
-//                    proposalQueue.put(message);
+                    oos.writeFloat(proposal);
+                    message.setPriority(proposal);
+                    proposalQueue.put(message);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-//            catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
+            catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -378,14 +378,14 @@ public class GroupMessengerActivity extends Activity {
                     try {
                         oos.writeUTF(message.encodeMessage());
                         oos.flush();
-//                        int proposal = (int) this.ois.readFloat();
-//
-//                        /* Update the global proposal number if the current number is less*/
-//                        synchronized(proposalNumber){
-//                            /* Retain the decimal value and update the whole value */
-//                            if(proposalNumber.intValue() < (int)proposal)
-//                                proposalNumber = proposal + (proposalNumber.intValue() -proposalNumber);
-//                        }
+                        int proposal = (int) this.ois.readFloat();
+
+                        /* Update the global proposal number if the current number is less*/
+                        synchronized(proposalNumber){
+                            /* Retain the decimal value and update the whole value */
+                            if(proposalNumber.intValue() < (int)proposal)
+                                proposalNumber = proposal + (proposalNumber.intValue() - proposalNumber);
+                        }
 
                     } catch (UnknownHostException e) {
                         Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
