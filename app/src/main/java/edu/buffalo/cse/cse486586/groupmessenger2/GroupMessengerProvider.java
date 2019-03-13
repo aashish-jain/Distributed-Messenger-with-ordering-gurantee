@@ -99,7 +99,6 @@ public class GroupMessengerProvider extends ContentProvider {
     @Override
     public Uri insert(Uri uri, ContentValues values) {
         /*
-         * TODO: You need to implement this method. Note that values will have two columns (a key
          * column and a value column) and one row that contains the actual (key, value) pair to be
          * inserted.
          * 
@@ -135,7 +134,6 @@ public class GroupMessengerProvider extends ContentProvider {
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
                         String sortOrder) {
         /*
-         * TODO: You need to implement this method. Note that you need to return a Cursor object
          * with the right format. If the formatting is not correct, then it is not going to work.
          *
          * If you use SQLite, whatever is returned from SQLite is a Cursor object. However, you

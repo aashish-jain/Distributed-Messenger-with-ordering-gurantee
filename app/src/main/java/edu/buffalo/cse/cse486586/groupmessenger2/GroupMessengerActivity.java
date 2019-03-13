@@ -44,7 +44,7 @@ public class GroupMessengerActivity extends Activity {
     int selfProcessId, messageId=0;
     Uri uri;
     AtomicInteger contentProviderKey;
-    Long proposalNumber;
+    Float proposalNumber;
     PriorityQueue<Message> deliveryQueue;
     LinkedBlockingQueue<Message> proposalQueue;
     int idIncrementValue = 0;
@@ -101,7 +101,7 @@ public class GroupMessengerActivity extends Activity {
         contentProviderKey = new AtomicInteger(0);
 
         /* Proposal Number*/
-        proposalNumber = new Long(selfProcessId);
+        proposalNumber = new Float(selfProcessId);
 
         /* Id increment value*/
         idIncrementValue = (int) Math.pow(10, selfProcessIdLen);
@@ -200,10 +200,10 @@ public class GroupMessengerActivity extends Activity {
             switch (from){
                 case 5554:  color = Color.MAGENTA;  break;
                 case 5556:  color = Color.BLACK;    break;
-                case 5558:  color = Color.DKGRAY;    break;
+                case 5558:  color = Color.DKGRAY;   break;
                 case 5560:  color = Color.BLUE;     break;
                 case 5562:  color = Color.RED;      break;
-                default:    color = Color.BLACK;   break;
+                default:    color = Color.BLACK;    break;
             }
             String line = "("+from + ") : " + message;
             appendColoredText(textView, line, color);
@@ -276,18 +276,22 @@ public class GroupMessengerActivity extends Activity {
                      * Update the UI thread */
                     runOnUiThread(new UpdateTextView(message.getMessage(), clientProcessId));
 
-                    /*
-                    long proposal = 0;
+                    /* Send a proposal with selfId in decimal places*/
+                    float proposal = selfProcessId / idIncrementValue;
                     synchronized (proposalNumber){
                         proposal = proposalNumber;
-                        proposalNumber+=1;
+                        proposalNumber += 1;
                     }
-                    oos.writeLong(proposal);
-                    */
+//                    oos.writeFloat(proposal);
+//                    message.setPriority(proposal);
+//                    proposalQueue.put(message);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
+//            catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
         }
     }
 
@@ -321,47 +325,10 @@ public class GroupMessengerActivity extends Activity {
                     establishConnection();
 
                 Log.d(TAG, message.toString());
-                for(int remoteProcessId : socketMap.keySet())
-                    socketMap.get(remoteProcessId).addToQueue(message);
-                return null;
-        }
-    }
-
-    private class ProposalHandler extends Thread{
-        final String TAG = "PROPOSAL_HANDLER";
-
-        ProposalHandler(){
-            this.start();
-        }
-
-        @Override
-        public void run(){
-            try {
-                /* Take the message from the proposal queue */
-                Message message = proposalQueue.take();
-
-                /* Find the message with given Id, update it and re-insert to the queue*/
-                Message queueMessage = findInPriorityQueue(deliveryQueue, message);
-                deliveryQueue.remove(queueMessage);
-                queueMessage.setPriority(message.getPriority());
-                deliveryQueue.offer(queueMessage);
-
-                /* Get the first message from the delivery queue and check if it is deliverable
-                * Then deliver all the deliverable messages at the beginning of the queue
-                */
-                message = deliveryQueue.peek();
-                while (message.isDeliverable()){
-                    /** TODO: Deliver the message */
-                    Log.d(TAG, "Delivered "+ message.toString());
-                    deliveryQueue.poll();
-                    writeToContentProvider(contentProviderKey.getAndIncrement(), message.getMessage());
-                    message = deliveryQueue.peek();
+                for(int remoteProcessId : socketMap.keySet()) {
+                        socketMap.get(remoteProcessId).addToQueue(new Message(message));
                 }
-
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
+                return null;
         }
     }
 
@@ -411,18 +378,14 @@ public class GroupMessengerActivity extends Activity {
                     try {
                         oos.writeUTF(message.encodeMessage());
                         oos.flush();
-                        /*
-                        long proposal = this.ois.readLong();
-                        */
-
-                        /* Update the global proposal number */
-                        /*
-                        synchronized(proposalNumber){
-                            if(proposalNumber < proposal)
-                                proposalNumber = proposal;
-                        }
-                        proposalQueue.put(message);
-                        */
+//                        int proposal = (int) this.ois.readFloat();
+//
+//                        /* Update the global proposal number if the current number is less*/
+//                        synchronized(proposalNumber){
+//                            /* Retain the decimal value and update the whole value */
+//                            if(proposalNumber.intValue() < (int)proposal)
+//                                proposalNumber = proposal + (proposalNumber.intValue() -proposalNumber);
+//                        }
 
                     } catch (UnknownHostException e) {
                         Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
@@ -434,6 +397,45 @@ public class GroupMessengerActivity extends Activity {
                     e.printStackTrace();
                 }
             }
+        }
+    }
+
+    private class ProposalHandler extends Thread{
+        final String TAG = "PROPOSAL_HANDLER";
+
+        @Override
+        public void run(){
+            try {
+                /* Take the message from the proposal queue */
+                Message message = proposalQueue.take();
+
+                /* Find the message with given Id, update it and re-insert to the queue*/
+                Message queueMessage = findInPriorityQueue(deliveryQueue, message);
+                deliveryQueue.remove(queueMessage);
+                queueMessage.setPriority(message.getPriority());
+                deliveryQueue.offer(queueMessage);
+
+                /* Multicast the message once the consensus has been reached */
+                if(message.getProposalCount() == 5)
+                    new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, message);
+
+
+                /* Get the first message from the delivery queue and check if it is deliverable
+                 * Then deliver all the deliverable messages at the beginning of the queue
+                 */
+                message = deliveryQueue.peek();
+                while (message.isDeliverable()){
+                    Log.d(TAG, "Delivered "+ message.toString());
+
+                    deliveryQueue.poll();
+                    writeToContentProvider(contentProviderKey.getAndIncrement(), message.getMessage());
+                    message = deliveryQueue.peek();
+                }
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
         }
     }
 

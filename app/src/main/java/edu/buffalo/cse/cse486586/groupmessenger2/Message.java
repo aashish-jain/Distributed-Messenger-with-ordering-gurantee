@@ -11,10 +11,10 @@ public class Message{
     static final int idLem=4;
     String seperator = "<sep>";
 
-    private int id;
+    private int id, proposalCount;
     private String message;
     private type type;
-    private long priority ;
+    private float priority ;
     private boolean deliverable;
 
     public boolean isDeliverable() {
@@ -33,13 +33,21 @@ public class Message{
         this.type = type.PROPOSAL_REQUEST;
     }
 
+    Message(Message message){
+        this.id = message.id;
+        this.message = message.message;
+        this.type = message.type;
+        this.priority = message.priority;
+        this.deliverable = message.deliverable;
+    }
+
     Message(String string) throws IOException {
         String[] strings = string.split(seperator);
         if(strings.length == 4) {
             this.type = type.valueOf(strings[0]);
             this.id = Integer.parseInt(strings[1]);
             this.message = strings[2];
-            this.priority = Long.parseLong(strings[3]);
+            this.priority = Float.parseFloat(strings[3]);
         }
         else {
             throw new IOException("unable to parse the String");
@@ -48,7 +56,7 @@ public class Message{
 
     @Override
     public String toString() {
-        return id+message;
+        return id+' '+message;
     }
 
     public String encodeMessage(){
@@ -65,6 +73,7 @@ public class Message{
     }
 
     public void setPriority(float priority){
+        proposalCount += 1;
         if(priority > priority) {
             priority = priority;
             type = type.ORDERED_MESSAGE;
@@ -77,6 +86,10 @@ public class Message{
 
     public type getType() {
         return type;
+    }
+
+    public int getProposalCount() {
+        return proposalCount;
     }
 }
 
