@@ -278,11 +278,11 @@ public class GroupMessengerActivity extends Activity {
 
                     /* Send a proposal with selfId in decimal places*/
                     float proposal = selfProcessId / idIncrementValue;
-                    synchronized (proposalNumber){
-                        proposal = proposalNumber;
-                        proposalNumber += 1;
-                    }
-                    oos.writeFloat(proposal);
+//                    synchronized (proposalNumber){
+//                        proposal = proposalNumber;
+//                        proposalNumber += 1;
+//                    }
+//                    oos.writeFloat(proposal);
                     message.setPriority(proposal);
                     proposalQueue.put(message);
                 }
@@ -378,14 +378,14 @@ public class GroupMessengerActivity extends Activity {
                     try {
                         oos.writeUTF(message.encodeMessage());
                         oos.flush();
-                        int proposal = (int) this.ois.readFloat();
-
-                        /* Update the global proposal number if the current number is less*/
-                        synchronized(proposalNumber){
-                            /* Retain the decimal value and update the whole value */
-                            if(proposalNumber.intValue() < (int)proposal)
-                                proposalNumber = proposal + (proposalNumber.intValue() - proposalNumber);
-                        }
+//                        int proposal = (int) this.ois.readFloat();
+//
+//                        /* Update the global proposal number if the current number is less*/
+//                        synchronized(proposalNumber){
+//                            /* Retain the decimal value and update the whole value */
+//                            if(proposalNumber.intValue() < (int)proposal)
+//                                proposalNumber = proposal + (proposalNumber.intValue() - proposalNumber);
+//                        }
 
                     } catch (UnknownHostException e) {
                         Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
@@ -411,8 +411,14 @@ public class GroupMessengerActivity extends Activity {
 
                 /* Find the message with given Id, update it and re-insert to the queue*/
                 Message queueMessage = findInPriorityQueue(deliveryQueue, message);
-                deliveryQueue.remove(queueMessage);
-                queueMessage.setPriority(message.getPriority());
+
+                if(queueMessage != null) {
+                    deliveryQueue.remove(queueMessage);
+                    queueMessage.setPriority(message.getPriority());
+                }
+                else {
+                    queueMessage = message;
+                }
                 deliveryQueue.offer(queueMessage);
 
                 /* Multicast the message once the consensus has been reached */
