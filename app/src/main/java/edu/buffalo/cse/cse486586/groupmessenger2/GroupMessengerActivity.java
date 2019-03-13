@@ -135,6 +135,9 @@ public class GroupMessengerActivity extends Activity {
         editText = (EditText) findViewById(R.id.editText1);
         textView = (TextView) findViewById(R.id.textView1);
 
+        /* Print my ID */
+        textView.append("My ID is "+selfProcessId+"\n");
+
         /*
          * Registers OnPTestClickListener for "button1" in the layout, which is the "PTest" button.
          * OnPTestClickListener demonstrates how to access a ContentProvider.
@@ -278,11 +281,11 @@ public class GroupMessengerActivity extends Activity {
 
                     /* Send a proposal with selfId in decimal places*/
                     float proposal = selfProcessId / idIncrementValue;
-//                    synchronized (proposalNumber){
-//                        proposal = proposalNumber;
-//                        proposalNumber += 1;
-//                    }
-//                    oos.writeFloat(proposal);
+                    synchronized (proposalNumber){
+                        proposal = proposalNumber;
+                        proposalNumber += 1;
+                    }
+                    oos.writeFloat(proposal);
                     message.setPriority(proposal);
                     proposalQueue.put(message);
                 }
@@ -378,14 +381,15 @@ public class GroupMessengerActivity extends Activity {
                     try {
                         oos.writeUTF(message.encodeMessage());
                         oos.flush();
-//                        int proposal = (int) this.ois.readFloat();
-//
-//                        /* Update the global proposal number if the current number is less*/
-//                        synchronized(proposalNumber){
-//                            /* Retain the decimal value and update the whole value */
-//                            if(proposalNumber.intValue() < (int)proposal)
-//                                proposalNumber = proposal + (proposalNumber.intValue() - proposalNumber);
-//                        }
+
+                        int proposal = (int) this.ois.readFloat();
+
+                        /* Update the global proposal number if the current number is less*/
+                        synchronized(proposalNumber){
+                            /* Retain the decimal value and update the whole value */
+                            if(proposalNumber.intValue() < (int)proposal)
+                                proposalNumber = proposal + (proposalNumber.intValue() - proposalNumber);
+                        }
 
                     } catch (UnknownHostException e) {
                         Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);

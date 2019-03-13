@@ -54,13 +54,13 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="java" value="15274" />
+          <entry key="java" value="15332" />
           <entry key="xml" value="5" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="JAVA" value="15274" />
+          <entry key="JAVA" value="15332" />
           <entry key="XML" value="5" />
         </counts>
       </usages-collector>
@@ -71,14 +71,13 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="276">
-              <caret line="419" column="43" selection-start-line="419" selection-start-column="43" selection-end-line="419" selection-end-column="43" />
+            <state relative-caret-position="368">
+              <caret line="138" selection-start-line="138" selection-end-line="138" />
               <folding>
                 <element signature="imports" expanded="true" />
                 <element signature="method#writeToContentProvider#0;class#GroupMessengerActivity#0" />
                 <element signature="method#printPriorityQueue#0;class#GroupMessengerActivity#0" />
                 <element signature="method#findInPriorityQueue#0;class#GroupMessengerActivity#0" />
-                <element signature="method#onCreate#0;class#GroupMessengerActivity#0" />
                 <element signature="method#onCreateOptionsMenu#0;class#GroupMessengerActivity#0" />
                 <element signature="class#UpdateTextView#0;class#GroupMessengerActivity#0" />
                 <element signature="class#ServerThreadSpawner#0;class#GroupMessengerActivity#0" />
@@ -336,7 +335,7 @@
       <window_info id="Image Layers" order="5" />
       <window_info id="Designer" order="6" />
       <window_info id="Favorites" order="7" side_tool="true" />
-      <window_info active="true" anchor="bottom" id="Logcat" order="0" visible="true" weight="0.32289416" />
+      <window_info anchor="bottom" id="Logcat" order="0" weight="0.32289416" />
       <window_info anchor="bottom" id="TODO" order="1" weight="0.32937366" />
       <window_info anchor="bottom" id="Android Profiler" order="2" weight="0.32937366" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.32937366" />
@@ -344,7 +343,7 @@
       <window_info anchor="bottom" id="Event Log" order="5" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="6" />
       <window_info anchor="bottom" id="Build" order="7" weight="0.32937366" />
-      <window_info anchor="bottom" id="Terminal" order="8" weight="0.3261339" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="8" visible="true" weight="0.3261339" />
       <window_info anchor="bottom" id="Find" order="9" weight="0.32937366" />
       <window_info anchor="right" id="Device File Explorer" order="0" side_tool="true" />
       <window_info anchor="right" id="Capture Analysis" order="1" />
@@ -430,14 +429,13 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="276">
-          <caret line="419" column="43" selection-start-line="419" selection-start-column="43" selection-end-line="419" selection-end-column="43" />
+        <state relative-caret-position="368">
+          <caret line="138" selection-start-line="138" selection-end-line="138" />
           <folding>
             <element signature="imports" expanded="true" />
             <element signature="method#writeToContentProvider#0;class#GroupMessengerActivity#0" />
             <element signature="method#printPriorityQueue#0;class#GroupMessengerActivity#0" />
             <element signature="method#findInPriorityQueue#0;class#GroupMessengerActivity#0" />
-            <element signature="method#onCreate#0;class#GroupMessengerActivity#0" />
             <element signature="method#onCreateOptionsMenu#0;class#GroupMessengerActivity#0" />
             <element signature="class#UpdateTextView#0;class#GroupMessengerActivity#0" />
             <element signature="class#ServerThreadSpawner#0;class#GroupMessengerActivity#0" />
