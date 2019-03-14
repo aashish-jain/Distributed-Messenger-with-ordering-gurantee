@@ -20,40 +20,12 @@ public class Message{
     /* Last 'n' didgits are the process/port number*/
     private long priority ;
 
-
-    public void setToDeliverable(){
-        type = MessageType.DELIVERABLE;
-    }
-
-    public boolean isDeliverable() {
-        return type.equals(MessageType.DELIVERABLE);
-    }
-
-    public boolean isProposal(){
-        return type.equals(MessageType.PROPOSAL_REQUEST);
-    }
-
-    public boolean isAgreement(){
-        return type.equals(MessageType.AGREEMENT);
-    }
-
-    void agree(){
-        type = MessageType.AGREEMENT;
-    }
-
     Message(int id, String message){
         this.id = id;
         this.message = message;
         this.priority = -1;
         /* When a message is first created, it needs to request proposals*/
         this.type = type.PROPOSAL_REQUEST;
-    }
-
-    Message(Message message){
-        this.id = message.id;
-        this.message = message.message;
-        this.type = message.type;
-        this.priority = message.priority;
     }
 
     Message(String string) throws IOException {
@@ -69,6 +41,27 @@ public class Message{
         }
     }
 
+
+    public boolean isProposal(){
+        return type.equals(MessageType.PROPOSAL_REQUEST);
+    }
+
+    public boolean isAgreement(){
+        return type.equals(MessageType.AGREEMENT);
+    }
+
+    public boolean isDeliverable() {
+        return type.equals(MessageType.DELIVERABLE);
+    }
+
+    void agree(){
+        type = MessageType.AGREEMENT;
+    }
+
+    public void setToDeliverable(){
+        type = MessageType.DELIVERABLE;
+    }
+
     @Override
     public String toString() {
         return id+"   "+message;
@@ -79,8 +72,7 @@ public class Message{
     }
 
     public String encodeMessage(){
-        return type + seperator + id
-                +seperator + message + seperator + priority;
+        return type + seperator + id + seperator + message + seperator + priority;
     }
 
     public int getId() {
@@ -100,20 +92,4 @@ public class Message{
         return priority;
     }
 
-    public MessageType getType() {
-        return type;
-    }
-
-}
-
-class MessageComparator implements Comparator<Message>{
-
-    @Override
-    public int compare(Message m1, Message m2) {
-//        if(m1.getPriority() > m2.getPriority())
-        if(m1.getPriority() > m2.getPriority())
-            return 1;
-        else
-            return -1;
-    }
 }

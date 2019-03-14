@@ -24,7 +24,7 @@ import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -41,17 +41,14 @@ public class GroupMessengerActivity extends Activity {
 
     TextView textView;
     EditText editText;
-    int selfProcessId, messageId=0;
+    int selfProcessId=0, messageId=0, idIncrementValue = 0;;
+    final int selfProcessIdLen = 4, initCapacity = 100;
+    long proposalNumber;
     Uri uri;
     AtomicInteger contentProviderKey;
-    Long proposalNumber;
     PriorityQueue<Message> deliveryQueue;
-    LinkedBlockingQueue<Message> proposalQueue;
-    int idIncrementValue = 0;
-
-    final int selfProcessIdLen = 4, initCapacity = 100;
-
-    Map<Integer, Client> clientMap = new HashMap<Integer, Client>();
+    LinkedBlockingQueue<Message> DeliveryManagerQueue;
+    Map<Integer, Client> clientMap;
 
     private int getProcessId(){
         String telephoneNumber =
@@ -69,24 +66,35 @@ public class GroupMessengerActivity extends Activity {
         getContentResolver().insert(uri, contentValues);
     }
 
-    public String printPriorityQueue(PriorityQueue<Message> priorityQueue) {
+    public String showPriorityQueue(PriorityQueue<Message> priorityQueue) {
         StringBuilder stringBuilder = new StringBuilder();
         PriorityQueue<Message> pq = new PriorityQueue<Message>(priorityQueue);
         int i = pq.size();
         for (; i!=0; i--){
-            stringBuilder.append( pq.poll().toString() + "\n" );
+            stringBuilder.append( pq.poll().allData() + "\n" );
         }
         return stringBuilder.toString();
     }
 
+    private synchronized void updateProposalNumber(long proposed){
+        /* Update Proposed to maximum */
+        long sendingId = proposalNumber % idIncrementValue;
+        proposed -= proposed % idIncrementValue;
+        if (proposalNumber - sendingId < proposed)
+            proposalNumber = proposed + sendingId;
+    }
+
+    private synchronized long getNewProposalNumber(long by){
+        /* Send a proposal with last 'n' digits with process ID*/
+        proposalNumber += by;
+        return proposalNumber;
+    }
+
     public Message findInPriorityQueue(PriorityQueue<Message> priorityQueue, int id) {
-        Message toReturn = null;
         for (Message priorityQueueIterator : priorityQueue)
-            if (priorityQueueIterator.getId() == id) {
-                toReturn = priorityQueueIterator;
-                break;
-            }
-        return toReturn;
+            if (priorityQueueIterator.getId() == id)
+                return priorityQueueIterator;
+        return null;
     }
 
     @Override
@@ -96,21 +104,35 @@ public class GroupMessengerActivity extends Activity {
 
         /* Get the process ID using telephone number*/
         selfProcessId = getProcessId();
-
+        /* Client Map*/
+        clientMap = new HashMap<Integer, Client>();
         /* Content Provider Key*/
         contentProviderKey = new AtomicInteger(0);
-
         /* Proposal Number*/
-        proposalNumber = new Long(selfProcessId);
-
+        proposalNumber = selfProcessId;
         /* Id increment value*/
         idIncrementValue = (int) Math.pow(10, selfProcessIdLen);
-
         /* delivery Queue */
-        deliveryQueue = new PriorityQueue<Message>(initCapacity, new MessageComparator());
-
+        deliveryQueue = new PriorityQueue<Message>(initCapacity, new Comparator<Message>() {
+            @Override
+            public int compare(Message lhs, Message rhs) {
+                if(lhs.getPriority() > rhs.getPriority())
+                    return 1;
+                else
+                    return -1;
+            }
+        });
         /* Proposal Queue */
-        proposalQueue = new LinkedBlockingQueue<Message>(initCapacity);
+        DeliveryManagerQueue = new LinkedBlockingQueue<Message>(initCapacity);
+        /* Process Id generator */
+        messageId = selfProcessId;
+        /* Get the textView and the editText of the activity */
+        textView = (TextView) findViewById(R.id.textView1);
+        textView.setMovementMethod(new ScrollingMovementMethod());
+        editText = (EditText) findViewById(R.id.editText1);
+        textView = (TextView) findViewById(R.id.textView1);
+        /* Print my ID */
+        textView.append("My ID is "+selfProcessId+"\n");
 
         /* Uri for the content provider */
         Uri.Builder uriBuilder = new Uri.Builder();
@@ -118,25 +140,12 @@ public class GroupMessengerActivity extends Activity {
         uriBuilder.scheme("content");
         uri = uriBuilder.build();
 
-        /* Starts the Server Interactor Spawner */
+        /* Starts the Server Thread Spawner */
         Log.d("START", "Server Started");
         new ServerThreadSpawner(selfProcessId).start();
-
-        Log.d("START", "Proposal Hndler Started");
-        new Thread(new ProposalHandler()).start();
-
-
-        /* Process Id generator */
-        messageId = selfProcessId;
-
-        /* Get the textView and the editText of the activity */
-        textView = (TextView) findViewById(R.id.textView1);
-        textView.setMovementMethod(new ScrollingMovementMethod());
-        editText = (EditText) findViewById(R.id.editText1);
-        textView = (TextView) findViewById(R.id.textView1);
-
-        /* Print my ID */
-        textView.append("My ID is "+selfProcessId+"\n");
+        /* Starts the Proposal Handler */
+        Log.d("START", "Proposal Handler Started");
+        new DeliveryQueueManager().start();
 
         /*
          * Registers OnPTestClickListener for "button1" in the layout, which is the "PTest" button.
@@ -159,7 +168,7 @@ public class GroupMessengerActivity extends Activity {
 
                 //, message, messageId
                 /* Update the message id here as it is threadsafe.
-                * Last 4 digits are process id and message/1000 is the message number
+                * Last 4 digits are process id and message/10000 is the message number
                 * */
 
                 new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, new Message(messageId, message));
@@ -180,7 +189,6 @@ public class GroupMessengerActivity extends Activity {
     private class UpdateTextView implements Runnable{
         String message;
         int from;
-
 
         UpdateTextView(String message, int from){
             this.message = message;
@@ -258,14 +266,29 @@ public class GroupMessengerActivity extends Activity {
 
         public  ServerThread(Socket socket, int selfId) {
             try {
+                this.selfId = selfId;
                 this.ois = new ObjectInputStream(socket.getInputStream());
                 this.oos = new ObjectOutputStream(socket.getOutputStream());
                 this.clientProcessId = ois.readInt();
-                this.selfId = selfId;
             } catch (IOException e) {
                 Log.e(TAG, "Unable to connect");
                 e.printStackTrace();
             }
+        }
+
+        private void respondToProposal(Message message) throws IOException, InterruptedException {
+
+            long proposal = getNewProposalNumber(idIncrementValue);
+            message.setPriority(proposal);
+            oos.writeLong(proposal);
+            oos.flush();
+            DeliveryManagerQueue.put(message);
+        }
+
+        private void processAgreement(Message message) throws InterruptedException {
+            message.setToDeliverable();
+            Log.d(TAG, "Adding to proposal Queue");
+            DeliveryManagerQueue.put(message);
         }
 
         @Override
@@ -276,25 +299,10 @@ public class GroupMessengerActivity extends Activity {
                     Message message = new Message(ois.readUTF());
                     Log.d(TAG, "Recieved " + message.toString());
 
-                    if(message.isProposal()){
-                        long proposal = 0;
-                        /* Send a proposal with last 'n' digits with process ID*/
-                        synchronized (proposalNumber){
-                            proposal = proposalNumber;
-                            proposalNumber += idIncrementValue;
-                            Log.d(TAG, "Server Proposal" +proposal);
-                        }
-
-                        message.setPriority(proposal);
-                        oos.writeLong(proposal);
-                        oos.flush();
-                        proposalQueue.put(message);
-                    }
-                    else if(message.isAgreement()){
-                        message.setToDeliverable();
-                        Log.d(TAG, "Adding to proposal Queue");
-                        proposalQueue.put(message);
-                    }
+                    if(message.isProposal())
+                        respondToProposal(message);
+                    else if(message.isAgreement())
+                        processAgreement(message);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -305,7 +313,7 @@ public class GroupMessengerActivity extends Activity {
         }
     }
 
-    private class ClientThreadSpawner extends AsyncTask<Message, Void, Void> {
+    private class ClientThreadSpawner extends AsyncTask<Message, Message, Void> {
         final String TAG = "CLIENT_THREAD_SP";
         final int[] remoteProcessIds = new int[]{11108, 11112, 11116, 11120, 11124};
 
@@ -338,30 +346,42 @@ public class GroupMessengerActivity extends Activity {
             }
 
             Log.d(TAG, message.toString());
-            for(int remoteProcessId : clientMap.keySet())
-                    clientMap.get(remoteProcessId).sendMessage(message);
-
 
             if(message.isProposal()) {
+                for (int remoteProcessId : clientMap.keySet())
+                    try {
+                        clientMap.get(remoteProcessId).requestProposal(message);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 message.agree();
-                proposalQueue.add(message);
+                Log.d(TAG, "Agreement reached for " + message.allData());
+                /* https://stackoverflow.com/questions/5779894/calling-an-asynctask-from-another-asynctask*/
+                publishProgress(message);
             }
-            Log.d(TAG, message.allData());
-
+            else if(message.isAgreement())
+                for(int remoteProcessId : clientMap.keySet())
+                    try {
+                        clientMap.get(remoteProcessId).sendAgreement(message);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
             return null;
+        }
+
+        protected void onProgressUpdate(Message...messages){
+            new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, messages[0]);
         }
     }
 
-    private class Client{
+    private class Client {
         Socket socket;
         int remoteProcessId;
         ObjectOutputStream oos;
         ObjectInputStream ois;
-        LinkedBlockingQueue<Message> messageQueue;
         final String TAG = "CLIENT";
 
-        Client(int remoteProcessId, Socket socket){
-            this.messageQueue = new LinkedBlockingQueue<Message>();
+        Client(int remoteProcessId, Socket socket) {
             this.socket = socket;
             this.remoteProcessId = remoteProcessId;
             try {
@@ -370,93 +390,77 @@ public class GroupMessengerActivity extends Activity {
                 this.ois = new ObjectInputStream(socket.getInputStream());
                 /* One-time operation. Send server the client's process id*/
                 this.oos.writeInt(selfProcessId);
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
+        public void requestProposal(Message message) throws IOException {
+            oos.writeUTF(message.encodeMessage());
+            oos.flush();
+            long proposed = ois.readLong();
+            Log.d(TAG, message.getId() + " proposal " + proposed);
+            message.setPriority(proposed);
+        }
 
-        public void sendMessage(Message message){
-            try {
-                if(message.isProposal()){
-                    oos.writeUTF(message.encodeMessage());
-                    oos.flush();
-
-                    long proposed = ois.readLong();
-                    message.setPriority(proposed);
-
-                    /* Update Proposed to maximum */
-                    synchronized (proposalNumber){
-                        long sendingId = proposalNumber % idIncrementValue;
-                        proposed -= proposed % idIncrementValue;
-                        if(proposalNumber - sendingId < proposed)
-                            proposalNumber = proposed + sendingId;
-                    }
-
-                }
-                else if(message.isAgreement()) {
-                    Log.d(TAG, "Broadcasting the agreement");
-                    oos.writeUTF(message.encodeMessage());
-                }
-            }
-            catch (UnknownHostException e) {
-                Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.e(TAG, "ClientThread socket IOException");
-            }
+        public void sendAgreement(Message message) throws IOException {
+            Log.d(TAG, "Broadcasting the agreement");
+            oos.writeUTF(message.encodeMessage());
         }
     }
 
-    private class ProposalHandler extends Thread{
+    private class DeliveryQueueManager extends Thread{
         final String TAG = "PROPOSAL_HANDLER";
+
+        /** Gets the first message from the delivery queue and check if it is deliverable
+         * Then delivers all the deliverable messages at the beginning of the queue
+         */
+        private void deliverAllDeliverable(){
+            Message message = deliveryQueue.peek();
+            while (message!=null && message.isDeliverable()) {
+                Log.d(TAG, "Delivered " + message.toString());
+                /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
+                 * Update the UI thread */
+                runOnUiThread(new UpdateTextView(message.getMessage(), message.getId() % idIncrementValue));
+                deliveryQueue.poll();
+                writeToContentProvider(contentProviderKey.getAndIncrement(), message.getMessage());
+                message = deliveryQueue.peek();
+            }
+        }
+
+        private void reUpdateMessages(Message message) {
+            /* Find the message with given Id, update it and re-insert to the queue*/
+            Message queueMessage = findInPriorityQueue(deliveryQueue, message.getId());
+
+            if (queueMessage != null) {
+                deliveryQueue.remove(queueMessage);
+                message.setPriority(queueMessage.getPriority());
+            } else
+                queueMessage = message;
+            deliveryQueue.offer(message);
+//            Log.d(TAG, "DQS " + deliveryQueue.size());
+
+            if(deliveryQueue.size() == 25) {
+//                Log.d(TAG, "Recieved all messages");
+                Log.d(TAG, "DQS"+"\n"+showPriorityQueue(deliveryQueue));
+            }
+        }
 
         @Override
         public void run(){
             try {
                 while(true) {
                     /* Take the message from the proposal queue */
-                    Message message = proposalQueue.take();
+                    Message message = DeliveryManagerQueue.take();
                     Log.d(TAG, message.allData());
 
-                    /* If the message ordering has been agreed and the process is the message's process
-                    * Just Multicast it again */
-                    if (message.isAgreement()) {
-                        Log.d(TAG, "Agreement reached for " + message.allData());
-                        new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, message);
-                        continue;
-                    }
+                    reUpdateMessages(message);
 
-                    /* Find the message with given Id, update it and re-insert to the queue*/
-                    Message queueMessage = findInPriorityQueue(deliveryQueue, message.getId());
-
-                    if (queueMessage != null) {
-                        deliveryQueue.remove(queueMessage);
-                        queueMessage.setPriority(message.getPriority());
-                    } else {
-                        queueMessage = message;
-                    }
-                    deliveryQueue.offer(queueMessage);
-
-                    /* Get the first message from the delivery queue and check if it is deliverable
-                     * Then deliver all the deliverable messages at the beginning of the queue
-                     */
-                    message = deliveryQueue.peek();
-                    while (message!=null && message.isDeliverable()) {
-                        Log.d(TAG, "Delivered " + message.toString());
-                        /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
-                         * Update the UI thread */
-                        runOnUiThread(new UpdateTextView(message.getMessage(), message.getId() % idIncrementValue));
-                        deliveryQueue.poll();
-                        writeToContentProvider(contentProviderKey.getAndIncrement(), message.getMessage());
-                        message = deliveryQueue.peek();
-                    }
+                    deliverAllDeliverable();
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
-
 }
