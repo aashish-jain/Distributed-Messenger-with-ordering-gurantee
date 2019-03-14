@@ -110,7 +110,7 @@ public class GroupMessengerProvider extends ContentProvider {
         /* Update if column is already present */
         /* https://stackoverflow.com/questions/13311727/android-sqlite-insert-or-update */
 
-//        Log.d("INSERT", values.toString());
+        Log.d("INSERT", values.toString());
         dbWriter.insertWithOnConflict(KeyValueStorageContract.KeyValueEntry.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
         return uri;
     }

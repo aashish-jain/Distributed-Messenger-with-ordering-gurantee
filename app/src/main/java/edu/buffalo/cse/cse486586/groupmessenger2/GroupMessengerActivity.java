@@ -299,7 +299,7 @@ public class GroupMessengerActivity extends Activity {
     }
 
     private class ClientThreadSpawner extends AsyncTask<Message, Void, Void> {
-        final String TAG = "CLIENT_THREAD";
+        final String TAG = "CLIENT_THREAD_SP";
         final int[] remoteProcessIds = new int[]{11108, 11112, 11116, 11120, 11124};
 
 
@@ -377,7 +377,6 @@ public class GroupMessengerActivity extends Activity {
             while (true){
                 try {
                     Message message = messageQueue.take();
-                    Log.d(TAG, message.getId() + ':' + message.getMessage());
                     try {
                         oos.writeUTF(message.encodeMessage());
                         oos.flush();
@@ -425,10 +424,13 @@ public class GroupMessengerActivity extends Activity {
                 }
                 deliveryQueue.offer(queueMessage);
 
-                /* Multicast the message once the consensus has been reached */
-                if(message.getProposalCount() == 5)
+                /* Multicast the message once the consensus has been reached and the current process
+                * had sent the message */
+                if(message.getProposalCount() == 5 && messageId == message.getId()%idIncrementValue) {
+                    Log.d(TAG, "Agreement reached for " + message.toString());
+                    message.agreed();
                     new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, message);
-
+                }
 
                 /* Get the first message from the delivery queue and check if it is deliverable
                  * Then deliver all the deliverable messages at the beginning of the queue

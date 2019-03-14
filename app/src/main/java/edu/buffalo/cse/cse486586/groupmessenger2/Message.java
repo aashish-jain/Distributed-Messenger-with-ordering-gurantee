@@ -3,8 +3,8 @@ package edu.buffalo.cse.cse486586.groupmessenger2;
 import java.io.IOException;
 import java.util.Comparator;
 
-enum type{
-    PROPOSAL_REQUEST, ORDERED_MESSAGE;
+enum MessageType{
+    PROPOSAL_REQUEST, AGREEMENT;
 }
 
 public class Message{
@@ -13,16 +13,16 @@ public class Message{
 
     private int id, proposalCount;
     private String message;
-    private type type;
+    private MessageType type;
     private float priority ;
-    private boolean deliverable;
+
 
     public boolean isDeliverable() {
-        return deliverable;
+        return type.equals(MessageType.AGREEMENT);
     }
 
-    public void setDeliverable(boolean deliverable) {
-        this.deliverable = deliverable;
+    void agreed(){
+
     }
 
     Message(int id, String message){
@@ -38,7 +38,6 @@ public class Message{
         this.message = message.message;
         this.type = message.type;
         this.priority = message.priority;
-        this.deliverable = message.deliverable;
     }
 
     Message(String string) throws IOException {
@@ -56,7 +55,7 @@ public class Message{
 
     @Override
     public String toString() {
-        return id+' '+message;
+        return id+"   "+message;
     }
 
     public String encodeMessage(){
@@ -76,7 +75,7 @@ public class Message{
         proposalCount += 1;
         if(priority > priority) {
             this.priority = priority;
-            type = type.ORDERED_MESSAGE;
+            type = MessageType.PROPOSAL_REQUEST;
         }
     }
 
@@ -84,7 +83,7 @@ public class Message{
         return priority;
     }
 
-    public type getType() {
+    public MessageType getType() {
         return type;
     }
 
