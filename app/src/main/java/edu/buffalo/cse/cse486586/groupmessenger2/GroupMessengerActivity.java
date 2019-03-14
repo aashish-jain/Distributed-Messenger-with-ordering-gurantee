@@ -51,7 +51,7 @@ public class GroupMessengerActivity extends Activity {
 
     final int selfProcessIdLen = 4, initCapacity = 100;
 
-    Map<Integer, ClientThread> socketMap = new HashMap<Integer, ClientThread>();
+    Map<Integer, Client> clientMap = new HashMap<Integer, Client>();
 
     private int getProcessId(){
         String telephoneNumber =
@@ -285,7 +285,7 @@ public class GroupMessengerActivity extends Activity {
                         proposal = proposalNumber;
                         proposalNumber += 1;
                     }
-                    oos.writeFloat(proposal);
+//                    oos.writeFloat(proposal);
                     message.setPriority(proposal);
                     proposalQueue.put(message);
                 }
@@ -304,38 +304,41 @@ public class GroupMessengerActivity extends Activity {
 
 
         protected void establishConnection(){
-                /* Establish the connection to server and store it in a Hashmap*/
-                for (int remoteProcessId : remoteProcessIds) {
-                    Socket socket = null;
-                    try {
-                        socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
-                                remoteProcessId);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    ClientThread clientThread = new ClientThread(remoteProcessId, socket);
-                    socketMap.put(remoteProcessId, clientThread);
-                    clientThread.start();
+
+            /* Establish the connection to server and store it in a Hashmap*/
+            for (int remoteProcessId : remoteProcessIds) {
+                Socket socket = null;
+                try {
+                    socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
+                            remoteProcessId);
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
+                Client client = new Client(remoteProcessId, socket);
+                clientMap.put(remoteProcessId, client);
+            }
+        }
+
+        @Override
+        protected Void doInBackground(Message... msgs) {
+            Message message = msgs[0];
+
+            //For the first time attempt to establish connection
+            if(clientMap.size() == 0) {
+                Log.d(TAG, "Establishing Connection to other nodes");
+                establishConnection();
+                Log.d(TAG, "Connection established");
             }
 
-            @Override
-            protected Void doInBackground(Message... msgs) {
-                Message message = msgs[0];
+            Log.d(TAG, message.toString());
+            for(int remoteProcessId : clientMap.keySet())
+                    clientMap.get(remoteProcessId).send(message);
 
-                //For the first time attempt to establish connection
-                if(socketMap.size() == 0)
-                    establishConnection();
-
-                Log.d(TAG, message.toString());
-                for(int remoteProcessId : socketMap.keySet()) {
-                        socketMap.get(remoteProcessId).addToQueue(new Message(message));
-                }
-                return null;
+            return null;
         }
     }
 
-    private class ClientThread extends Thread{
+    private class Client{
         Socket socket;
         int remoteProcessId;
         ObjectOutputStream oos;
@@ -343,7 +346,7 @@ public class GroupMessengerActivity extends Activity {
         LinkedBlockingQueue<Message> messageQueue;
         final String TAG = "CLIENT_THREAD";
 
-        ClientThread(int remoteProcessId, Socket socket){
+        Client(int remoteProcessId, Socket socket){
             this.messageQueue = new LinkedBlockingQueue<Message>();
             this.socket = socket;
             this.remoteProcessId = remoteProcessId;
@@ -363,42 +366,27 @@ public class GroupMessengerActivity extends Activity {
             }
         }
 
-        void addToQueue(Message message){
+
+        public void send(Message message){
             try {
-                messageQueue.put(message);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+                oos.writeUTF(message.encodeMessage());
+                oos.flush();
 
+//                int proposal = (int) this.ois.readFloat();
+                int proposal = 0;
 
-        @Override
-        public void run(){
-            while (true){
-                try {
-                    Message message = messageQueue.take();
-                    try {
-                        oos.writeUTF(message.encodeMessage());
-                        oos.flush();
-
-                        int proposal = (int) this.ois.readFloat();
-
-                        /* Update the global proposal number if the current number is less*/
-                        synchronized(proposalNumber){
-                            /* Retain the decimal value and update the whole value */
-                            if(proposalNumber.intValue() < (int)proposal)
-                                proposalNumber = proposal + (proposalNumber.intValue() - proposalNumber);
-                        }
-
-                    } catch (UnknownHostException e) {
-                        Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        Log.e(TAG, "ClientThread socket IOException");
-                    }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                /* Update the global proposal number if the current number is less*/
+                synchronized (proposalNumber) {
+                    /* Retain the decimal value and update the whole value */
+                    if (proposalNumber.intValue() < (int) proposal)
+                        proposalNumber = proposal + (proposalNumber.intValue() - proposalNumber);
                 }
+            }
+            catch (UnknownHostException e) {
+                Log.e(TAG, "ClientThread UnknownHostException port=" + remoteProcessId);
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.e(TAG, "ClientThread socket IOException");
             }
         }
     }
