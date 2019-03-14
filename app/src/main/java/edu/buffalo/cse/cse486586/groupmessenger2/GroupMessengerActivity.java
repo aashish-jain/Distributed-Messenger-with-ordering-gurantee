@@ -71,17 +71,17 @@ public class GroupMessengerActivity extends Activity {
         PriorityQueue<Message> pq = new PriorityQueue<Message>(priorityQueue);
         int i = pq.size();
         for (; i!=0; i--){
-            stringBuilder.append( pq.poll().allData() + "\n" );
+            stringBuilder.append( pq.poll().allData());
         }
         return stringBuilder.toString();
     }
 
     private synchronized void updateProposalNumber(long proposed){
         /* Update Proposed to maximum */
-        long sendingId = proposalNumber % idIncrementValue;
+        long selfId = proposalNumber % idIncrementValue;
         proposed -= proposed % idIncrementValue;
-        if (proposalNumber - sendingId < proposed)
-            proposalNumber = proposed + sendingId;
+        if (proposalNumber - selfId < proposed)
+            proposalNumber = proposed + selfId;
     }
 
     private synchronized long getNewProposalNumber(long by){
@@ -255,6 +255,8 @@ public class GroupMessengerActivity extends Activity {
     }
 
 
+    static Integer count = new Integer(1), count2 = new Integer(1);
+
     /* https://stackoverflow.com/questions/10131377/socket-programming-multiple-client-to-one-server*/
     private class ServerThread extends Thread {
         ObjectOutputStream oos;
@@ -289,6 +291,11 @@ public class GroupMessengerActivity extends Activity {
             message.setToDeliverable();
             Log.d(TAG, "Adding to proposal Queue");
             DeliveryManagerQueue.put(message);
+            synchronized (count2) {
+                Log.d(TAG+"/SRAAGREEMENT", "Recieved Count = "+count2);
+                count2+=1;
+            }
+
         }
 
         @Override
@@ -297,7 +304,7 @@ public class GroupMessengerActivity extends Activity {
             try {
                 while (true) {
                     Message message = new Message(ois.readUTF());
-                    Log.d(TAG, "Recieved " + message.toString());
+                    Log.d(TAG, "Received " + message.toString());
 
                     if(message.isProposal())
                         respondToProposal(message);
@@ -390,6 +397,7 @@ public class GroupMessengerActivity extends Activity {
                 this.ois = new ObjectInputStream(socket.getInputStream());
                 /* One-time operation. Send server the client's process id*/
                 this.oos.writeInt(selfProcessId);
+                oos.flush();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -401,13 +409,20 @@ public class GroupMessengerActivity extends Activity {
             long proposed = ois.readLong();
             Log.d(TAG, message.getId() + " proposal " + proposed);
             message.setPriority(proposed);
+            updateProposalNumber(proposed);
         }
 
         public void sendAgreement(Message message) throws IOException {
-            Log.d(TAG, "Broadcasting the agreement");
             oos.writeUTF(message.encodeMessage());
+            oos.flush();
+            synchronized (count) {
+                Log.d(TAG+"/CBAAGREEMENT", "Recieved Count = "+count);
+                count+=1;
+            }
+
         }
     }
+
 
     private class DeliveryQueueManager extends Thread{
         final String TAG = "PROPOSAL_HANDLER";
@@ -432,18 +447,18 @@ public class GroupMessengerActivity extends Activity {
             /* Find the message with given Id, update it and re-insert to the queue*/
             Message queueMessage = findInPriorityQueue(deliveryQueue, message.getId());
 
+//            Log.d("UPDATER-BF", message.allData());
             if (queueMessage != null) {
                 deliveryQueue.remove(queueMessage);
                 message.setPriority(queueMessage.getPriority());
             } else
                 queueMessage = message;
+//            Log.d("UPDATER-AF", message.allData());
             deliveryQueue.offer(message);
-//            Log.d(TAG, "DQS " + deliveryQueue.size());
 
-            if(deliveryQueue.size() == 25) {
-//                Log.d(TAG, "Recieved all messages");
-                Log.d(TAG, "DQS"+"\n"+showPriorityQueue(deliveryQueue));
-            }
+//            if(deliveryQueue.size() == 25)
+//                Log.d(TAG+"DQS\n", showPriorityQueue(deliveryQueue));
+
         }
 
         @Override
@@ -452,7 +467,10 @@ public class GroupMessengerActivity extends Activity {
                 while(true) {
                     /* Take the message from the proposal queue */
                     Message message = DeliveryManagerQueue.take();
-                    Log.d(TAG, message.allData());
+//                    Log.d(TAG, message.allData());
+//                    Log.d(TAG, count + " Count messages in queue");
+//                    count+=1;
+
 
                     reUpdateMessages(message);
 
