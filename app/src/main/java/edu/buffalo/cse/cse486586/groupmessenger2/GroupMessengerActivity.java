@@ -295,6 +295,7 @@ public class GroupMessengerActivity extends Activity {
                 Log.d(TAG+"/SRAAGREEMENT", "Recieved Count = "+count2);
                 count2+=1;
             }
+            updateProposalNumber(message.getPriority());
 
         }
 
@@ -409,7 +410,6 @@ public class GroupMessengerActivity extends Activity {
             long proposed = ois.readLong();
             Log.d(TAG, message.getId() + " proposal " + proposed);
             message.setPriority(proposed);
-            updateProposalNumber(proposed);
         }
 
         public void sendAgreement(Message message) throws IOException {
@@ -433,7 +433,7 @@ public class GroupMessengerActivity extends Activity {
         private void deliverAllDeliverable(){
             Message message = deliveryQueue.peek();
             while (message!=null && message.isDeliverable()) {
-                Log.d(TAG, "Delivered " + message.toString());
+                Log.d(TAG, "Delivered " + message.allData());
                 /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
                  * Update the UI thread */
                 runOnUiThread(new UpdateTextView(message.getMessage(), message.getId() % idIncrementValue));
@@ -447,17 +447,12 @@ public class GroupMessengerActivity extends Activity {
             /* Find the message with given Id, update it and re-insert to the queue*/
             Message queueMessage = findInPriorityQueue(deliveryQueue, message.getId());
 
-//            Log.d("UPDATER-BF", message.allData());
             if (queueMessage != null) {
                 deliveryQueue.remove(queueMessage);
                 message.setPriority(queueMessage.getPriority());
-            } else
-                queueMessage = message;
+            }
 //            Log.d("UPDATER-AF", message.allData());
             deliveryQueue.offer(message);
-
-//            if(deliveryQueue.size() == 25)
-//                Log.d(TAG+"DQS\n", showPriorityQueue(deliveryQueue));
 
         }
 
