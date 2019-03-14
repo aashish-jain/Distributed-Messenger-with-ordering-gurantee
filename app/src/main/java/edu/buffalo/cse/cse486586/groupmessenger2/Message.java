@@ -1,28 +1,44 @@
 package edu.buffalo.cse.cse486586.groupmessenger2;
 
+import android.media.MediaExtractor;
+
 import java.io.IOException;
 import java.util.Comparator;
 
 enum MessageType{
-    PROPOSAL_REQUEST, AGREEMENT;
+    PROPOSAL_REQUEST, AGREEMENT, DELIVERABLE;
 }
 
 public class Message{
     static final int idLem=4;
-    String seperator = "<sep>";
+    static String seperator = "<sep>";
 
-    private int id, proposalCount;
+    private int id;
     private String message;
     private MessageType type;
-    private float priority ;
 
+    /* Last 'n' didgits are the process/port number*/
+    private long priority ;
+
+
+    public void setToDeliverable(){
+        type = MessageType.DELIVERABLE;
+    }
 
     public boolean isDeliverable() {
+        return type.equals(MessageType.DELIVERABLE);
+    }
+
+    public boolean isProposal(){
+        return type.equals(MessageType.PROPOSAL_REQUEST);
+    }
+
+    public boolean isAgreement(){
         return type.equals(MessageType.AGREEMENT);
     }
 
-    void agreed(){
-
+    void agree(){
+        type = MessageType.AGREEMENT;
     }
 
     Message(int id, String message){
@@ -46,7 +62,7 @@ public class Message{
             this.type = type.valueOf(strings[0]);
             this.id = Integer.parseInt(strings[1]);
             this.message = strings[2];
-            this.priority = Float.parseFloat(strings[3]);
+            this.priority = Long.parseLong(strings[3]);
         }
         else {
             throw new IOException("unable to parse the String");
@@ -56,6 +72,10 @@ public class Message{
     @Override
     public String toString() {
         return id+"   "+message;
+    }
+
+    public String allData(){
+        return id+" "+message+" "+type+" "+priority;
     }
 
     public String encodeMessage(){
@@ -71,15 +91,12 @@ public class Message{
         return message;
     }
 
-    public void setPriority(float priority){
-        proposalCount += 1;
-        if(priority > priority) {
+    public void setPriority(long priority){
+        if(this.priority < priority)
             this.priority = priority;
-            type = MessageType.PROPOSAL_REQUEST;
-        }
     }
 
-    public float getPriority(){
+    public long getPriority(){
         return priority;
     }
 
@@ -87,9 +104,6 @@ public class Message{
         return type;
     }
 
-    public int getProposalCount() {
-        return proposalCount;
-    }
 }
 
 class MessageComparator implements Comparator<Message>{
@@ -97,7 +111,7 @@ class MessageComparator implements Comparator<Message>{
     @Override
     public int compare(Message m1, Message m2) {
 //        if(m1.getPriority() > m2.getPriority())
-        if(m1.getId() > m2.getId())
+        if(m1.getPriority() > m2.getPriority())
             return 1;
         else
             return -1;

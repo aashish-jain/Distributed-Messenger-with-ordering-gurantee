@@ -110,7 +110,7 @@ public class GroupMessengerProvider extends ContentProvider {
         /* Update if column is already present */
         /* https://stackoverflow.com/questions/13311727/android-sqlite-insert-or-update */
 
-        Log.d("INSERT", values.toString());
+//        Log.d("INSERT", values.toString());
         dbWriter.insertWithOnConflict(KeyValueStorageContract.KeyValueEntry.TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
         return uri;
     }
@@ -170,8 +170,8 @@ public class GroupMessengerProvider extends ContentProvider {
                 sortOrder               // The sort order
         );
 
-        if(cursor.getCount() == 0)
-            Log.e("QUERY", selectionArgs[0] + " not found :-(");
+//        if(cursor.getCount() == 0)
+//            Log.e("QUERY", selectionArgs[0] + " not found :-(");
 
         return  cursor;
     }

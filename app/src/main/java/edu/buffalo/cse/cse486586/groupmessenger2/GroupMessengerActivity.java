@@ -44,7 +44,7 @@ public class GroupMessengerActivity extends Activity {
     int selfProcessId, messageId=0;
     Uri uri;
     AtomicInteger contentProviderKey;
-    Float proposalNumber;
+    Long proposalNumber;
     PriorityQueue<Message> deliveryQueue;
     LinkedBlockingQueue<Message> proposalQueue;
     int idIncrementValue = 0;
@@ -79,11 +79,11 @@ public class GroupMessengerActivity extends Activity {
         return stringBuilder.toString();
     }
 
-    public Message findInPriorityQueue(PriorityQueue<Message> priorityQueue, Message message) {
+    public Message findInPriorityQueue(PriorityQueue<Message> priorityQueue, int id) {
         Message toReturn = null;
         for (Message priorityQueueIterator : priorityQueue)
-            if (priorityQueueIterator.getId() == message.getId()) {
-                toReturn = message;
+            if (priorityQueueIterator.getId() == id) {
+                toReturn = priorityQueueIterator;
                 break;
             }
         return toReturn;
@@ -101,7 +101,7 @@ public class GroupMessengerActivity extends Activity {
         contentProviderKey = new AtomicInteger(0);
 
         /* Proposal Number*/
-        proposalNumber = new Float(selfProcessId);
+        proposalNumber = new Long(selfProcessId);
 
         /* Id increment value*/
         idIncrementValue = (int) Math.pow(10, selfProcessIdLen);
@@ -122,7 +122,7 @@ public class GroupMessengerActivity extends Activity {
         Log.d("START", "Server Started");
         new ServerThreadSpawner(selfProcessId).start();
 
-        Log.d("START", "Proposal HAndler Started");
+        Log.d("START", "Proposal Hndler Started");
         new Thread(new ProposalHandler()).start();
 
 
@@ -275,21 +275,26 @@ public class GroupMessengerActivity extends Activity {
                 while (true) {
                     Message message = new Message(ois.readUTF());
                     Log.d(TAG, "Recieved " + message.toString());
-                    /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
-                     * Update the UI thread */
-                    runOnUiThread(new UpdateTextView(message.getMessage(), clientProcessId));
 
-                    /* Send a proposal with selfId in decimal places*/
-                    float proposal = selfProcessId / idIncrementValue;
-                    synchronized (proposalNumber){
-                        proposal = proposalNumber;
-                        proposalNumber += 1;
+                    if(message.isProposal()){
+                        long proposal = 0;
+                        /* Send a proposal with last 'n' digits with process ID*/
+                        synchronized (proposalNumber){
+                            proposal = proposalNumber;
+                            proposalNumber += idIncrementValue;
+                            Log.d(TAG, "Server Proposal" +proposal);
+                        }
+
+                        message.setPriority(proposal);
+                        oos.writeLong(proposal);
+                        oos.flush();
+                        proposalQueue.put(message);
                     }
-                    message.setPriority(proposal);
-                    oos.writeFloat(proposal);
-                    oos.flush();
-                    Log.d(TAG, "Added message to Proposal queue. Size is now" + proposalQueue.size());
-                    proposalQueue.put(message);
+                    else if(message.isAgreement()){
+                        message.setToDeliverable();
+                        Log.d(TAG, "Adding to proposal Queue");
+                        proposalQueue.put(message);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -334,7 +339,14 @@ public class GroupMessengerActivity extends Activity {
 
             Log.d(TAG, message.toString());
             for(int remoteProcessId : clientMap.keySet())
-                    clientMap.get(remoteProcessId).getProposal(message);
+                    clientMap.get(remoteProcessId).sendMessage(message);
+
+
+            if(message.isProposal()) {
+                message.agree();
+                proposalQueue.add(message);
+            }
+            Log.d(TAG, message.allData());
 
             return null;
         }
@@ -365,18 +377,27 @@ public class GroupMessengerActivity extends Activity {
         }
 
 
-        public void getProposal(Message message){
+        public void sendMessage(Message message){
             try {
-                oos.writeUTF(message.encodeMessage());
-                oos.flush();
+                if(message.isProposal()){
+                    oos.writeUTF(message.encodeMessage());
+                    oos.flush();
 
-                int proposal = (int) this.ois.readFloat();
+                    long proposed = ois.readLong();
+                    message.setPriority(proposed);
 
-                /* Update the global proposal number if the current number is less*/
-                synchronized (proposalNumber) {
-                    /* Retain the decimal value and update the whole value */
-                    if (proposalNumber.intValue() < (int) proposal)
-                        proposalNumber = proposal + (proposalNumber.intValue() - proposalNumber);
+                    /* Update Proposed to maximum */
+                    synchronized (proposalNumber){
+                        long sendingId = proposalNumber % idIncrementValue;
+                        proposed -= proposed % idIncrementValue;
+                        if(proposalNumber - sendingId < proposed)
+                            proposalNumber = proposed + sendingId;
+                    }
+
+                }
+                else if(message.isAgreement()) {
+                    Log.d(TAG, "Broadcasting the agreement");
+                    oos.writeUTF(message.encodeMessage());
                 }
             }
             catch (UnknownHostException e) {
@@ -397,10 +418,18 @@ public class GroupMessengerActivity extends Activity {
                 while(true) {
                     /* Take the message from the proposal queue */
                     Message message = proposalQueue.take();
-                    Log.d(TAG, "Got a new message");
+                    Log.d(TAG, message.allData());
+
+                    /* If the message ordering has been agreed and the process is the message's process
+                    * Just Multicast it again */
+                    if (message.isAgreement()) {
+                        Log.d(TAG, "Agreement reached for " + message.allData());
+                        new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, message);
+                        continue;
+                    }
 
                     /* Find the message with given Id, update it and re-insert to the queue*/
-                    Message queueMessage = findInPriorityQueue(deliveryQueue, message);
+                    Message queueMessage = findInPriorityQueue(deliveryQueue, message.getId());
 
                     if (queueMessage != null) {
                         deliveryQueue.remove(queueMessage);
@@ -410,21 +439,15 @@ public class GroupMessengerActivity extends Activity {
                     }
                     deliveryQueue.offer(queueMessage);
 
-                    /* Multicast the message once the consensus has been reached and the current process
-                     * had sent the message */
-                    if (message.getProposalCount() == 5 && selfProcessId == message.getId() % idIncrementValue) {
-                        Log.d(TAG, "Agreement reached for " + message.toString());
-                        message.agreed();
-                        new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, message);
-                    }
-
                     /* Get the first message from the delivery queue and check if it is deliverable
                      * Then deliver all the deliverable messages at the beginning of the queue
                      */
                     message = deliveryQueue.peek();
-                    while (message.isDeliverable()) {
+                    while (message!=null && message.isDeliverable()) {
                         Log.d(TAG, "Delivered " + message.toString());
-
+                        /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
+                         * Update the UI thread */
+                        runOnUiThread(new UpdateTextView(message.getMessage(), message.getId() % idIncrementValue));
                         deliveryQueue.poll();
                         writeToContentProvider(contentProviderKey.getAndIncrement(), message.getMessage());
                         message = deliveryQueue.peek();
@@ -433,7 +456,6 @@ public class GroupMessengerActivity extends Activity {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
         }
     }
 
