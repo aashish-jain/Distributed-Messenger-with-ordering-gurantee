@@ -285,8 +285,10 @@ public class GroupMessengerActivity extends Activity {
                         proposal = proposalNumber;
                         proposalNumber += 1;
                     }
-//                    oos.writeFloat(proposal);
                     message.setPriority(proposal);
+                    oos.writeFloat(proposal);
+                    oos.flush();
+                    Log.d(TAG, "Added message to Proposal queue. Size is now" + proposalQueue.size());
                     proposalQueue.put(message);
                 }
             } catch (IOException e) {
@@ -332,7 +334,7 @@ public class GroupMessengerActivity extends Activity {
 
             Log.d(TAG, message.toString());
             for(int remoteProcessId : clientMap.keySet())
-                    clientMap.get(remoteProcessId).send(message);
+                    clientMap.get(remoteProcessId).getProposal(message);
 
             return null;
         }
@@ -344,17 +346,13 @@ public class GroupMessengerActivity extends Activity {
         ObjectOutputStream oos;
         ObjectInputStream ois;
         LinkedBlockingQueue<Message> messageQueue;
-        final String TAG = "CLIENT_THREAD";
+        final String TAG = "CLIENT";
 
         Client(int remoteProcessId, Socket socket){
             this.messageQueue = new LinkedBlockingQueue<Message>();
             this.socket = socket;
             this.remoteProcessId = remoteProcessId;
             try {
-                /*
-                 * https://stackoverflow.com/questions/5680259/using-sockets-to-send-and-receive-data
-                 * https://stackoverflow.com/questions/49654735/send-objects-and-strings-over-socket
-                 */
                 /* Streams */
                 this.oos = new ObjectOutputStream(socket.getOutputStream());
                 this.ois = new ObjectInputStream(socket.getInputStream());
@@ -367,13 +365,12 @@ public class GroupMessengerActivity extends Activity {
         }
 
 
-        public void send(Message message){
+        public void getProposal(Message message){
             try {
                 oos.writeUTF(message.encodeMessage());
                 oos.flush();
 
-//                int proposal = (int) this.ois.readFloat();
-                int proposal = 0;
+                int proposal = (int) this.ois.readFloat();
 
                 /* Update the global proposal number if the current number is less*/
                 synchronized (proposalNumber) {
@@ -397,41 +394,42 @@ public class GroupMessengerActivity extends Activity {
         @Override
         public void run(){
             try {
-                /* Take the message from the proposal queue */
-                Message message = proposalQueue.take();
+                while(true) {
+                    /* Take the message from the proposal queue */
+                    Message message = proposalQueue.take();
+                    Log.d(TAG, "Got a new message");
 
-                /* Find the message with given Id, update it and re-insert to the queue*/
-                Message queueMessage = findInPriorityQueue(deliveryQueue, message);
+                    /* Find the message with given Id, update it and re-insert to the queue*/
+                    Message queueMessage = findInPriorityQueue(deliveryQueue, message);
 
-                if(queueMessage != null) {
-                    deliveryQueue.remove(queueMessage);
-                    queueMessage.setPriority(message.getPriority());
-                }
-                else {
-                    queueMessage = message;
-                }
-                deliveryQueue.offer(queueMessage);
+                    if (queueMessage != null) {
+                        deliveryQueue.remove(queueMessage);
+                        queueMessage.setPriority(message.getPriority());
+                    } else {
+                        queueMessage = message;
+                    }
+                    deliveryQueue.offer(queueMessage);
 
-                /* Multicast the message once the consensus has been reached and the current process
-                * had sent the message */
-                if(message.getProposalCount() == 5 && messageId == message.getId()%idIncrementValue) {
-                    Log.d(TAG, "Agreement reached for " + message.toString());
-                    message.agreed();
-                    new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, message);
-                }
+                    /* Multicast the message once the consensus has been reached and the current process
+                     * had sent the message */
+                    if (message.getProposalCount() == 5 && selfProcessId == message.getId() % idIncrementValue) {
+                        Log.d(TAG, "Agreement reached for " + message.toString());
+                        message.agreed();
+                        new ClientThreadSpawner().executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, message);
+                    }
 
-                /* Get the first message from the delivery queue and check if it is deliverable
-                 * Then deliver all the deliverable messages at the beginning of the queue
-                 */
-                message = deliveryQueue.peek();
-                while (message.isDeliverable()){
-                    Log.d(TAG, "Delivered "+ message.toString());
-
-                    deliveryQueue.poll();
-                    writeToContentProvider(contentProviderKey.getAndIncrement(), message.getMessage());
+                    /* Get the first message from the delivery queue and check if it is deliverable
+                     * Then deliver all the deliverable messages at the beginning of the queue
+                     */
                     message = deliveryQueue.peek();
-                }
+                    while (message.isDeliverable()) {
+                        Log.d(TAG, "Delivered " + message.toString());
 
+                        deliveryQueue.poll();
+                        writeToContentProvider(contentProviderKey.getAndIncrement(), message.getMessage());
+                        message = deliveryQueue.peek();
+                    }
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

@@ -6,6 +6,7 @@
     </shared>
   </component>
   <component name="AndroidLogFilters">
+    <option name="TOOL_WINDOW_CUSTOM_FILTER" value="HAN" />
     <option name="TOOL_WINDOW_CONFIGURED_FILTER" value="Show only selected application" />
   </component>
   <component name="ChangeListManager">
@@ -54,13 +55,13 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="java" value="15879" />
+          <entry key="java" value="16188" />
           <entry key="xml" value="5" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="JAVA" value="15879" />
+          <entry key="JAVA" value="16188" />
           <entry key="XML" value="5" />
         </counts>
       </usages-collector>
@@ -71,14 +72,18 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="233">
-              <caret line="376" lean-forward="true" selection-start-line="375" selection-end-line="376" />
+            <state relative-caret-position="65">
+              <caret line="399" column="52" lean-forward="true" selection-start-line="399" selection-end-line="400" />
               <folding>
                 <element signature="imports" expanded="true" />
                 <element signature="e#1545#1562#0" expanded="true" />
                 <element signature="e#2427#2436#0" expanded="true" />
                 <element signature="e#5228#6010#0" expanded="true" />
                 <element signature="e#6009#6010#0" expanded="true" />
+                <element signature="class#ClientThreadSpawner#0;class#GroupMessengerActivity#0" />
+                <element signature="method#establishConnection#0;class#ClientThreadSpawner#0;class#GroupMessengerActivity#0" />
+                <element signature="method#doInBackground#0;class#ClientThreadSpawner#0;class#GroupMessengerActivity#0" />
+                <element signature="method#Client#0;class#Client#0;class#GroupMessengerActivity#0" />
               </folding>
             </state>
           </provider>
@@ -143,13 +148,13 @@
       <find>this.s</find>
       <find>prio</find>
       <find>priority</find>
-      <find>proposal</find>
       <find>Reciv</find>
       <find>toStr</find>
       <find>message.</find>
       <find>message.get</find>
       <find>Log.d</find>
       <find>socketMap</find>
+      <find>proposal</find>
     </findStrings>
     <replaceStrings>
       <replace>ServerInteractorSpawner</replace>
@@ -333,14 +338,14 @@
       <window_info id="Image Layers" order="5" />
       <window_info id="Designer" order="6" />
       <window_info id="Favorites" order="7" side_tool="true" />
-      <window_info anchor="bottom" id="Logcat" order="0" weight="0.32289416" />
-      <window_info anchor="bottom" id="TODO" order="1" weight="0.32937366" />
-      <window_info anchor="bottom" id="Android Profiler" order="2" weight="0.32937366" />
+      <window_info active="true" anchor="bottom" id="Logcat" order="0" sideWeight="0.49893278" visible="true" weight="0.32289416" />
+      <window_info anchor="bottom" id="TODO" order="1" sideWeight="0.4994664" weight="0.32937366" />
+      <window_info anchor="bottom" id="Android Profiler" order="2" sideWeight="0.4994664" weight="0.32937366" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.32937366" />
       <window_info anchor="bottom" id="Run" order="4" weight="0.32937366" />
-      <window_info anchor="bottom" id="Event Log" order="5" side_tool="true" />
+      <window_info anchor="bottom" id="Event Log" order="5" sideWeight="0.5010672" side_tool="true" weight="0.32289416" />
       <window_info anchor="bottom" id="Version Control" order="6" />
-      <window_info active="true" anchor="bottom" id="Build" order="7" visible="true" weight="0.32937366" />
+      <window_info anchor="bottom" id="Build" order="7" weight="0.32937366" />
       <window_info anchor="bottom" id="Terminal" order="8" weight="0.3261339" />
       <window_info anchor="bottom" id="Find" order="9" weight="0.32937366" />
       <window_info anchor="right" id="Device File Explorer" order="0" side_tool="true" />
@@ -429,14 +434,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/app/src/main/java/edu/buffalo/cse/cse486586/groupmessenger2/GroupMessengerActivity.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="233">
-          <caret line="376" lean-forward="true" selection-start-line="375" selection-end-line="376" />
+        <state relative-caret-position="65">
+          <caret line="399" column="52" lean-forward="true" selection-start-line="399" selection-end-line="400" />
           <folding>
             <element signature="imports" expanded="true" />
             <element signature="e#1545#1562#0" expanded="true" />
             <element signature="e#2427#2436#0" expanded="true" />
             <element signature="e#5228#6010#0" expanded="true" />
             <element signature="e#6009#6010#0" expanded="true" />
+            <element signature="class#ClientThreadSpawner#0;class#GroupMessengerActivity#0" />
+            <element signature="method#establishConnection#0;class#ClientThreadSpawner#0;class#GroupMessengerActivity#0" />
+            <element signature="method#doInBackground#0;class#ClientThreadSpawner#0;class#GroupMessengerActivity#0" />
+            <element signature="method#Client#0;class#Client#0;class#GroupMessengerActivity#0" />
           </folding>
         </state>
       </provider>
