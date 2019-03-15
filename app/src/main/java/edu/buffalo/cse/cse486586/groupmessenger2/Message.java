@@ -100,8 +100,8 @@ public class Message{
         return priority;
     }
 
-    public long getSender(){
-        return id%idLen;
+    public long getSender(int num){
+        return id%num;
     }
 
 }

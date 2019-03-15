@@ -45,7 +45,7 @@ public class GroupMessengerActivity extends Activity {
     TextView textView;
     EditText editText;
     int selfProcessId=0, messageId=0, idIncrementValue = 0;
-    static final int selfProcessIdLen = 4, initCapacity = 100, socketTimeout = 2000;
+    static final int selfProcessIdLen = 4, initCapacity = 100, socketTimeout = 5000;
     long proposalNumber;
     Uri uri;
     AtomicInteger contentProviderKey;
@@ -67,6 +67,16 @@ public class GroupMessengerActivity extends Activity {
         contentValues.put("key", new Integer(key).toString());
         contentValues.put("value", message);
         getContentResolver().insert(uri, contentValues);
+    }
+
+    public void notifyFailure(int id){
+        Message failureMessage = new Message(id,"");
+        failureMessage.setFailure();
+        try {
+            DeliveryManagerQueue.put(failureMessage);
+        } catch (InterruptedException e1) {
+            e1.printStackTrace();
+        }
     }
 
     public String showPriorityQueue(PriorityQueue<Message> priorityQueue) {
@@ -144,10 +154,8 @@ public class GroupMessengerActivity extends Activity {
         uri = uriBuilder.build();
 
         /* Starts the Server Thread Spawner */
-        Log.d("START", "Server Started");
         new ServerThreadSpawner(selfProcessId).start();
         /* Starts the Proposal Handler */
-        Log.d("START", "Proposal Handler Started");
         new DeliveryQueueManager().start();
 
         /*
@@ -233,7 +241,6 @@ public class GroupMessengerActivity extends Activity {
 
         public ServerThreadSpawner(int selfProcessId){
             this.selfProcessId = selfProcessId;
-            Log.d(TAG, "Got selfProcessId = " + selfProcessId);
         }
 
         public void run() {
@@ -249,10 +256,10 @@ public class GroupMessengerActivity extends Activity {
             while (true)
                 try {
                     Socket socket = serverSocket.accept();
+                    socket.setSoTimeout(socketTimeout);
                     new ServerThread(socket, this.selfProcessId).start();
                 } catch (IOException e) {
                     e.printStackTrace();
-                    Log.e(TAG, "ServerThreadSpawner socket IOException");
                 }
         }
     }
@@ -273,9 +280,9 @@ public class GroupMessengerActivity extends Activity {
                 this.ois = new ObjectInputStream(socket.getInputStream());
                 this.oos = new ObjectOutputStream(socket.getOutputStream());
                 this.clientProcessId = ois.readInt();
-            } catch (IOException e) {
-                Log.e(TAG, "Unable to connect");
-                e.printStackTrace();
+            } catch (Exception e) {
+                Log.e(TAG, "Failure");
+                notifyFailure(this.clientProcessId);
             }
         }
 
@@ -290,10 +297,8 @@ public class GroupMessengerActivity extends Activity {
 
         private void processAgreement(Message message) throws InterruptedException {
             message.setToDeliverable();
-            Log.d(TAG, "Adding to proposal Queue");
             DeliveryManagerQueue.put(message);
             updateProposalNumber(message.getPriority());
-
         }
 
         @Override
@@ -302,25 +307,20 @@ public class GroupMessengerActivity extends Activity {
             try {
                 while (true) {
                     Message message = new Message(ois.readUTF());
-                    Log.d(TAG, "Received " + message.toString());
-
                     if(message.isProposal())
                         respondToProposal(message);
                     else if(message.isAgreement())
                         processAgreement(message);
                 }
-            } catch (EOFException e){
-                Log.d(TAG, "EOFException occurred");
-            } catch (IOException e) {
-                Log.d(TAG, "IOException occurred");
-            } catch (InterruptedException e) {
-                Log.d(TAG, "Interrupted Server thread");
+            } catch (Exception e) {
+                Log.e(TAG, "Failure");
+                notifyFailure(this.clientProcessId);
             }
         }
     }
 
     private class ClientThreadSpawner extends AsyncTask<Message, Message, Void> {
-        final String TAG = "CLIENT_THREAD_SP";
+        final String TAG = "CLIENT_TASK";
         final int[] remoteProcessIds = new int[]{11108, 11112, 11116, 11120, 11124};
 
 
@@ -334,7 +334,7 @@ public class GroupMessengerActivity extends Activity {
                             remoteProcessId);
                     socket.setSoTimeout(socketTimeout);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    Log.e(TAG, "Unable to establish connection with the server");
                 }
                 Client client = new Client(remoteProcessId, socket);
                 clientMap.put(remoteProcessId, client);
@@ -347,25 +347,20 @@ public class GroupMessengerActivity extends Activity {
 
             //For the first time attempt to establish connection
             if(clientMap.size() == 0) {
-                Log.d(TAG, "Establishing Connection to other nodes");
                 establishConnection();
-                Log.d(TAG, "Connection established");
             }
 
-            Log.d(TAG, message.toString());
-
+            LinkedList<Integer> toRemove = new LinkedList<Integer>();
             if(message.isProposal()) {
                 for (int remoteProcessId : clientMap.keySet())
                     try {
                         clientMap.get(remoteProcessId).requestProposal(message);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (NullPointerException e){
-                        Log.e(TAG, "Possible Failure. Removing the node");
-                        clientMap.remove(remoteProcessId);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failure Detected in Proposal");
+                        toRemove.add(remoteProcessId);
+                        notifyFailure(remoteProcessId);
                     }
                 message.agree();
-                Log.d(TAG, "Agreement reached for " + message.allData());
                 /* https://stackoverflow.com/questions/5779894/calling-an-asynctask-from-another-asynctask*/
                 publishProgress(message);
             }
@@ -373,19 +368,15 @@ public class GroupMessengerActivity extends Activity {
                 for(int remoteProcessId : clientMap.keySet())
                     try {
                         clientMap.get(remoteProcessId).sendAgreement(message);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (NullPointerException e){
-                        clientMap.remove(remoteProcessId);
-                        Message failureMessage = new Message(-1,"");
-                        failureMessage.setFailure();
-                        try {
-                            DeliveryManagerQueue.put(failureMessage);
-                            Log.d(TAG, "Failure message");
-                        } catch (InterruptedException e1) {
-                            e1.printStackTrace();
-                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failure detected in agreement");
+                        toRemove.add(remoteProcessId);
+                        notifyFailure(remoteProcessId);
                     }
+
+            for(int remoteProcessId : toRemove)
+                clientMap.remove(remoteProcessId);
+
             return null;
         }
 
@@ -399,8 +390,7 @@ public class GroupMessengerActivity extends Activity {
         int remoteProcessId;
         ObjectOutputStream oos;
         ObjectInputStream ois;
-        final String TAG = "CLIENT";
-
+        final String TAG = "CLIENTOBJ";
         Client(int remoteProcessId, Socket socket) {
             this.socket = socket;
             this.remoteProcessId = remoteProcessId;
@@ -411,20 +401,20 @@ public class GroupMessengerActivity extends Activity {
                 /* One-time operation. Send server the client's process id*/
                 this.oos.writeInt(selfProcessId);
                 oos.flush();
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (Exception e) {
+                Log.e(TAG, "Failure detected in connecting with server");
+                notifyFailure(this.remoteProcessId);
             }
         }
 
-        public void requestProposal(Message message) throws IOException {
+        public void requestProposal(Message message) throws Exception {
             oos.writeUTF(message.encodeMessage());
             oos.flush();
             long proposed = ois.readLong();
-            Log.d(TAG, message.getId() + " proposal " + proposed);
             message.setPriority(proposed);
         }
 
-        public void sendAgreement(Message message) throws IOException {
+        public void sendAgreement(Message message) throws Exception {
             oos.writeUTF(message.encodeMessage());
             oos.flush();
         }
@@ -440,7 +430,6 @@ public class GroupMessengerActivity extends Activity {
         private void deliverAllDeliverable(){
             Message message = deliveryQueue.peek();
             while (message!=null && message.isDeliverable()) {
-                Log.d(TAG, "Delivered " + message.allData());
                 /* https://stackoverflow.com/questions/12716850/android-update-textview-in-thread-and-runnable
                  * Update the UI thread */
                 runOnUiThread(new UpdateTextView(message.getMessage(), message.getId() % idIncrementValue));
@@ -458,7 +447,6 @@ public class GroupMessengerActivity extends Activity {
                 deliveryQueue.remove(queueMessage);
                 message.setPriority(queueMessage.getPriority());
             }
-//            Log.d("UPDATER-AF", message.allData());
             deliveryQueue.offer(message);
 
         }
@@ -469,34 +457,28 @@ public class GroupMessengerActivity extends Activity {
                 while(true) {
                     /* Take the message from the proposal queue */
                     Message message = DeliveryManagerQueue.take();
-//                    Log.d(TAG, message.allData());
-//                    Log.d(TAG, count + " Count messages in queue");
-//                    count+=1;
-                    removeFailures(message);
 
-                    reUpdateMessages(message);
-
+                    if(message.isFailure())
+                        removeFailures(message);
+                    else
+                        reUpdateMessages(message);
                     deliverAllDeliverable();
                 }
             } catch (InterruptedException e) {
-                Log.d(TAG, "DeliveryQueueManager Interrupted");
+                Log.e(TAG, "DeliveryQueueManager Interrupted");
             }
         }
 
         private void removeFailures(Message message) {
             if(!message.isFailure())
                 return;
-            Log.d("FAILUREREM","");
-            int count = 0;
             LinkedList<Message> removeList = new LinkedList<Message>();
             for (Message priorityQueueIterator : deliveryQueue)
-                if (priorityQueueIterator.getSender() == message.getSender()) {
+                if (priorityQueueIterator.getSender(idIncrementValue) == message.getSender(idIncrementValue))
                     removeList.add(priorityQueueIterator);
-                }
 
-            Log.d(TAG, "Removed " + removeList.size() + " Failures");
             for(Message message1: removeList)
-                deliveryQueue.remove(message);
+                deliveryQueue.remove(message1);
         }
     }
 }
