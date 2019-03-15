@@ -6,11 +6,11 @@ import java.io.IOException;
 import java.util.Comparator;
 
 enum MessageType{
-    PROPOSAL_REQUEST, AGREEMENT, DELIVERABLE;
+    PROPOSAL_REQUEST, AGREEMENT, DELIVERABLE, FAILURE;
 }
 
 public class Message{
-    static final int idLem=4;
+    static final int idLen=4;
     static String seperator = "<sep>";
 
     private int id;
@@ -54,7 +54,15 @@ public class Message{
         return type.equals(MessageType.DELIVERABLE);
     }
 
-    void agree(){
+    public boolean isFailure(){
+        return type.equals((MessageType.FAILURE));
+    }
+
+    public void setFailure(){
+        type = MessageType.FAILURE;
+    }
+
+    public void agree(){
         type = MessageType.AGREEMENT;
     }
 
@@ -90,6 +98,10 @@ public class Message{
 
     public long getPriority(){
         return priority;
+    }
+
+    public long getSender(){
+        return id%idLen;
     }
 
 }

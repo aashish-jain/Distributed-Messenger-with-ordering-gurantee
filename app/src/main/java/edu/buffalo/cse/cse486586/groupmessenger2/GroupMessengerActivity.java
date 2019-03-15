@@ -13,11 +13,13 @@ import android.text.method.ScrollingMovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -26,6 +28,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -41,8 +44,8 @@ public class GroupMessengerActivity extends Activity {
 
     TextView textView;
     EditText editText;
-    int selfProcessId=0, messageId=0, idIncrementValue = 0;;
-    final int selfProcessIdLen = 4, initCapacity = 100;
+    int selfProcessId=0, messageId=0, idIncrementValue = 0;
+    static final int selfProcessIdLen = 4, initCapacity = 100, socketTimeout = 2000;
     long proposalNumber;
     Uri uri;
     AtomicInteger contentProviderKey;
@@ -255,8 +258,6 @@ public class GroupMessengerActivity extends Activity {
     }
 
 
-    static Integer count = new Integer(1), count2 = new Integer(1);
-
     /* https://stackoverflow.com/questions/10131377/socket-programming-multiple-client-to-one-server*/
     private class ServerThread extends Thread {
         ObjectOutputStream oos;
@@ -291,10 +292,6 @@ public class GroupMessengerActivity extends Activity {
             message.setToDeliverable();
             Log.d(TAG, "Adding to proposal Queue");
             DeliveryManagerQueue.put(message);
-            synchronized (count2) {
-                Log.d(TAG+"/SRAAGREEMENT", "Recieved Count = "+count2);
-                count2+=1;
-            }
             updateProposalNumber(message.getPriority());
 
         }
@@ -312,11 +309,12 @@ public class GroupMessengerActivity extends Activity {
                     else if(message.isAgreement())
                         processAgreement(message);
                 }
+            } catch (EOFException e){
+                Log.d(TAG, "EOFException occurred");
             } catch (IOException e) {
-                e.printStackTrace();
-            }
-            catch (InterruptedException e) {
-                e.printStackTrace();
+                Log.d(TAG, "IOException occurred");
+            } catch (InterruptedException e) {
+                Log.d(TAG, "Interrupted Server thread");
             }
         }
     }
@@ -334,6 +332,7 @@ public class GroupMessengerActivity extends Activity {
                 try {
                     socket = new Socket(InetAddress.getByAddress(new byte[]{10, 0, 2, 2}),
                             remoteProcessId);
+                    socket.setSoTimeout(socketTimeout);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -361,6 +360,9 @@ public class GroupMessengerActivity extends Activity {
                         clientMap.get(remoteProcessId).requestProposal(message);
                     } catch (IOException e) {
                         e.printStackTrace();
+                    } catch (NullPointerException e){
+                        Log.e(TAG, "Possible Failure. Removing the node");
+                        clientMap.remove(remoteProcessId);
                     }
                 message.agree();
                 Log.d(TAG, "Agreement reached for " + message.allData());
@@ -373,6 +375,16 @@ public class GroupMessengerActivity extends Activity {
                         clientMap.get(remoteProcessId).sendAgreement(message);
                     } catch (IOException e) {
                         e.printStackTrace();
+                    } catch (NullPointerException e){
+                        clientMap.remove(remoteProcessId);
+                        Message failureMessage = new Message(-1,"");
+                        failureMessage.setFailure();
+                        try {
+                            DeliveryManagerQueue.put(failureMessage);
+                            Log.d(TAG, "Failure message");
+                        } catch (InterruptedException e1) {
+                            e1.printStackTrace();
+                        }
                     }
             return null;
         }
@@ -415,11 +427,6 @@ public class GroupMessengerActivity extends Activity {
         public void sendAgreement(Message message) throws IOException {
             oos.writeUTF(message.encodeMessage());
             oos.flush();
-            synchronized (count) {
-                Log.d(TAG+"/CBAAGREEMENT", "Recieved Count = "+count);
-                count+=1;
-            }
-
         }
     }
 
@@ -465,15 +472,31 @@ public class GroupMessengerActivity extends Activity {
 //                    Log.d(TAG, message.allData());
 //                    Log.d(TAG, count + " Count messages in queue");
 //                    count+=1;
-
+                    removeFailures(message);
 
                     reUpdateMessages(message);
 
                     deliverAllDeliverable();
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Log.d(TAG, "DeliveryQueueManager Interrupted");
             }
+        }
+
+        private void removeFailures(Message message) {
+            if(!message.isFailure())
+                return;
+            Log.d("FAILUREREM","");
+            int count = 0;
+            LinkedList<Message> removeList = new LinkedList<Message>();
+            for (Message priorityQueueIterator : deliveryQueue)
+                if (priorityQueueIterator.getSender() == message.getSender()) {
+                    removeList.add(priorityQueueIterator);
+                }
+
+            Log.d(TAG, "Removed " + removeList.size() + " Failures");
+            for(Message message1: removeList)
+                deliveryQueue.remove(message);
         }
     }
 }
