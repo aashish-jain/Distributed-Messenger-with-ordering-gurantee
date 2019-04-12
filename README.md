@@ -1,8 +1,6 @@
 ## CSE 486/586 Distributed Systems
 
-## PA - 2B
-
-## Android Group Messenger with Total and FIFO Ordering Guarantee
+### PA - 2B : Android Group Messenger with Total and FIFO Ordering Guarantee
 
 
 ### Introduction
